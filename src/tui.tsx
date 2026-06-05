@@ -260,14 +260,23 @@ function Inspector({ entry }: { entry: PortEntry | undefined }) {
         <span fg={theme.yellow}>Port</span> {entry.port}  <span fg={theme.yellow}>PID</span> {entry.pid ?? "-"}
       </text>
       <text height={1}>
-        <span fg={theme.blue}>Endpoint</span> {entry.protocol.toUpperCase()} {entry.address}:{entry.port}
+        <span fg={theme.blue}>Endpoint</span> {entry.protocol.toUpperCase()} {entry.address}:{entry.port}  <span fg={theme.blue}>State</span> {entry.state}
+      </text>
+      <text height={1}>
+        <span fg={theme.blue}>Owner</span> {entry.user ?? "-"}  <span fg={theme.blue}>UID</span> {entry.uid ?? "-"}
       </text>
       <text height={1}>
         <span fg={theme.blue}>Inode</span> {entry.inode}  <span fg={theme.blue}>Detection</span> {Math.round(entry.detection.confidence * 100)}%
       </text>
       <text height={1} fg={theme.blue} content="Process" />
       <text height={1}>
+        <span fg={theme.yellow}>Name</span> {entry.name ?? "-"}
+      </text>
+      <text height={1}>
         <span fg={theme.yellow}>Command</span> {entry.cmdline ?? entry.exe ?? "-"}
+      </text>
+      <text height={1}>
+        <span fg={theme.blue}>Binary</span> {entry.exe ?? "-"}
       </text>
       <text height={1}>
         <span fg={theme.blue}>CWD</span> {entry.cwd ?? "-"}
@@ -275,6 +284,7 @@ function Inspector({ entry }: { entry: PortEntry | undefined }) {
       <text height={1}>
         <span fg={theme.blue}>Evidence</span> {entry.detection.evidence.join(", ") || "no detection evidence"}
       </text>
+      {entry.permissionDenied ? <text height={1} fg={theme.yellow} content="Permissions partial /proc data" /> : null}
     </>
   );
 }
@@ -539,9 +549,27 @@ function appName(app: AppKind): string {
     postgres: "postgres",
     redis: "redis",
     mysql: "mysql",
+    mongodb: "mongodb",
+    elasticsearch: "elastic",
+    rabbitmq: "rabbitmq",
+    memcached: "memcached",
     docker: "docker",
     podman: "podman",
     mcp: "mcp",
+    apache: "apache",
+    nginx: "nginx",
+    caddy: "caddy",
+    lighttpd: "lighttpd",
+    traefik: "traefik",
+    haproxy: "haproxy",
+    envoy: "envoy",
+    php: "php",
+    python: "python",
+    java: "java",
+    ruby: "ruby",
+    ssh: "ssh",
+    dns: "dns",
+    web: "web",
     program: "program",
     unknown: "unknown"
   };
@@ -559,9 +587,27 @@ function appBadge(app: AppKind): string {
     postgres: "[PG]",
     redis: "[REDIS]",
     mysql: "[MYSQL]",
+    mongodb: "[MONGO]",
+    elasticsearch: "[ES]",
+    rabbitmq: "[AMQP]",
+    memcached: "[CACHE]",
     docker: "[DOCKER]",
     podman: "[POD]",
     mcp: "[MCP]",
+    apache: "[HTTPD]",
+    nginx: "[NGINX]",
+    caddy: "[CADDY]",
+    lighttpd: "[LIGHT]",
+    traefik: "[TRAEF]",
+    haproxy: "[HAPRO]",
+    envoy: "[ENVOY]",
+    php: "[PHP]",
+    python: "[PY]",
+    java: "[JAVA]",
+    ruby: "[RUBY]",
+    ssh: "[SSH]",
+    dns: "[DNS]",
+    web: "[WEB]",
     program: "[PROC]",
     unknown: "[?]"
   };

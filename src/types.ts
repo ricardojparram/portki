@@ -10,9 +10,27 @@ export type AppKind =
   | "postgres"
   | "redis"
   | "mysql"
+  | "mongodb"
+  | "elasticsearch"
+  | "rabbitmq"
+  | "memcached"
   | "docker"
   | "podman"
   | "mcp"
+  | "apache"
+  | "nginx"
+  | "caddy"
+  | "lighttpd"
+  | "traefik"
+  | "haproxy"
+  | "envoy"
+  | "php"
+  | "python"
+  | "java"
+  | "ruby"
+  | "ssh"
+  | "dns"
+  | "web"
   | "program"
   | "unknown";
 
@@ -50,6 +68,7 @@ export interface PortEntry extends SocketRecord {
   cmdline?: string;
   cwd?: string;
   exe?: string;
+  name?: string;
   app: AppKind;
   detection: AppDetection;
   risk: RiskLevel;

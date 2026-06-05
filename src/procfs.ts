@@ -80,6 +80,7 @@ async function enrichEntry(socket: SocketRecord, processInfo: ProcessInfo | unde
     ...(processInfo?.cmdline !== undefined ? { cmdline: processInfo.cmdline } : {}),
     ...(processInfo?.cwd !== undefined ? { cwd: processInfo.cwd } : {}),
     ...(processInfo?.exe !== undefined ? { exe: processInfo.exe } : {}),
+    ...(processInfo?.name !== undefined ? { name: processInfo.name } : {}),
     ...(processInfo?.permissionDenied !== undefined ? { permissionDenied: processInfo.permissionDenied } : {})
   };
   const detection = await detectApp(base);

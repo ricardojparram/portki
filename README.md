@@ -9,7 +9,7 @@
 
 `portki` is a Linux TUI for inspecting local port listeners and stopping them with a conservative kill policy.
 
-It is built for developer machines where ports are constantly occupied by Next.js, NestJS, Vite, Docker, Podman, MCP servers, databases, and background tools. The scanner reads Linux `/proc` directly, so normal usage does not depend on `lsof`, `ss`, or `fuser`.
+It is built for developer machines where ports are constantly occupied by Next.js, NestJS, Vite, Docker, Podman, MCP servers, web servers, databases, and background tools. The scanner reads Linux `/proc` directly, so normal usage does not depend on `lsof`, `ss`, or `fuser`.
 
 ## Preview
 
@@ -19,7 +19,8 @@ It is built for developer machines where ports are constantly occupied by Next.j
 
 - Dense lazygit-style TUI with listener list, inspector, summary chart, search, command mode, and centered confirmations.
 - Fast Linux scanner based on `/proc/net/*` plus `/proc/<pid>/fd` inode mapping.
-- App detection for Next.js, NestJS, Vite, Node, Bun, Deno, Docker, Podman, MCP servers, Postgres, Redis, MySQL, and generic programs.
+- App detection for Next.js, NestJS, Vite, Node, Bun, Deno, Docker, Podman, MCP servers, Apache, Nginx, Caddy, Lighttpd, Traefik, HAProxy, Envoy, Postgres, Redis, MySQL, MongoDB, Elasticsearch, RabbitMQ, Memcached, SSH, DNS, Python, PHP, Java, Ruby, and generic programs.
+- Low-confidence hints for unresolved sockets on well-known ports such as 22, 53, 80, 443, 5432, 6379, 3306, 27017, 9200, 5672, and 11211.
 - Safe kill flow: `SIGTERM` first, short wait, second confirmation before `SIGKILL`.
 - Group selection with `<space>` and grouped kill confirmation.
 - Parseable CLI output for scripting with `portki list --json`.
@@ -94,7 +95,7 @@ Kill confirmations accept `y` or `Enter`. `Esc` cancels modals and line input.
 ## Safety Model
 
 - Blocks unresolved PIDs, PID 1, and the running `portki` process.
-- Marks infrastructure listeners such as Postgres, Redis, MySQL, Docker, and Podman as high risk.
+- Marks infrastructure listeners such as web servers, databases, SSH, DNS, Docker, and Podman as high risk.
 - Never sends `SIGKILL` first.
 - Requires a second confirmation before force killing remaining processes.
 - Shows partial data when `/proc` permissions prevent reading process details.

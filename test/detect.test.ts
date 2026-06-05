@@ -49,6 +49,28 @@ describe("detectApp", () => {
   test("marks infrastructure apps as high risk", async () => {
     expect(riskForDetection(await detectApp(entry({ cmdline: "postgres -D /var/lib/postgres" })))).toBe("high");
     expect(riskForDetection(await detectApp(entry({ exe: "/usr/bin/docker-proxy" })))).toBe("high");
+    expect(riskForDetection(await detectApp(entry({ exe: "/usr/sbin/nginx", cmdline: "nginx: master process" })))).toBe("high");
+  });
+
+  test("detects common web servers and reverse proxies", async () => {
+    expect((await detectApp(entry({ port: 80, exe: "/usr/sbin/apache2", cmdline: "/usr/sbin/apache2 -DFOREGROUND" }))).app).toBe("apache");
+    expect((await detectApp(entry({ port: 443, exe: "/usr/sbin/httpd", cmdline: "httpd -DFOREGROUND" }))).app).toBe("apache");
+    expect((await detectApp(entry({ exe: "/usr/sbin/nginx", cmdline: "nginx: master process /usr/sbin/nginx" }))).app).toBe("nginx");
+    expect((await detectApp(entry({ exe: "/usr/bin/caddy", cmdline: "caddy run --config /etc/caddy/Caddyfile" }))).app).toBe("caddy");
+    expect((await detectApp(entry({ exe: "/usr/bin/traefik", cmdline: "traefik --configFile=/etc/traefik.yml" }))).app).toBe("traefik");
+    expect((await detectApp(entry({ exe: "/usr/sbin/haproxy", cmdline: "haproxy -f /etc/haproxy/haproxy.cfg" }))).app).toBe("haproxy");
+  });
+
+  test("uses well-known ports as low-confidence hints when process data is unavailable", async () => {
+    const http = await detectApp(entry({ port: 80 }));
+    const https = await detectApp(entry({ port: 443 }));
+    const dns = await detectApp(entry({ port: 53 }));
+
+    expect(http.app).toBe("web");
+    expect(http.evidence).toContain("port 80 http");
+    expect(http.confidence).toBeLessThan(0.5);
+    expect(https.app).toBe("web");
+    expect(dns.app).toBe("dns");
   });
 
   test("detects Docker listener helpers beyond docker-proxy", async () => {
@@ -70,7 +92,7 @@ describe("detectApp", () => {
 
   test("falls back to program for real binaries", async () => {
     const detection = await detectApp(entry({ exe: "/usr/bin/python3.12", cmdline: "python3 -m http.server" }));
-    expect(detection.app).toBe("program");
-    expect(detection.evidence).toContain("binary python3.12");
+    expect(detection.app).toBe("python");
+    expect(detection.evidence).toContain("command python");
   });
 });
