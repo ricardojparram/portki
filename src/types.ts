@@ -42,6 +42,22 @@ export interface AppDetection {
   evidence: string[];
 }
 
+export interface ContainerPort {
+  hostPort: number;
+  containerPort?: number;
+  hostIp?: string;
+  protocol?: "tcp" | "udp";
+}
+
+export interface ContainerInfo {
+  engine: "docker" | "podman";
+  id?: string;
+  name?: string;
+  image?: string;
+  ports: ContainerPort[];
+  evidence: string[];
+}
+
 export interface ProcessInfo {
   pid: number;
   user?: string;
@@ -72,6 +88,7 @@ export interface PortEntry extends SocketRecord {
   app: AppKind;
   detection: AppDetection;
   risk: RiskLevel;
+  container?: ContainerInfo;
   permissionDenied?: boolean;
 }
 

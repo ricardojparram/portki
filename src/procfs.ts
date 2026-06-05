@@ -2,6 +2,7 @@ import { readdir, readFile, readlink } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { parseProcNet } from "./proc-net";
 import { detectApp, riskForDetection } from "./detect";
+import { enrichWithContainers } from "./containers";
 import type { PortEntry, ProcessInfo, Protocol, SocketRecord } from "./types";
 
 const PROC_NET_FILES: Array<[Protocol, string]> = [
@@ -27,7 +28,8 @@ export async function scanPorts(procRoot = "/proc"): Promise<PortEntry[]> {
     }
   }
 
-  return entries.sort((left, right) => left.port - right.port || (left.pid ?? 0) - (right.pid ?? 0));
+  const enriched = await enrichWithContainers(entries);
+  return enriched.sort((left, right) => left.port - right.port || (left.pid ?? 0) - (right.pid ?? 0));
 }
 
 export async function readSockets(procRoot = "/proc"): Promise<SocketRecord[]> {

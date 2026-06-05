@@ -31,6 +31,7 @@ describe("CLI", () => {
     expect(code).toBe(0);
     expect(logs.join("\n")).toContain("portki");
     expect(logs.join("\n")).toContain("portki list [--json]");
+    expect(logs.join("\n")).toContain("portki doctor");
     expect(logs.join("\n")).not.toContain("portui");
   });
 

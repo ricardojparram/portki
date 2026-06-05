@@ -1,5 +1,6 @@
 import { scanPorts } from "./procfs";
 import { executeKillPlan, planKill } from "./kill-policy";
+import { formatDoctorReport, inspectDoctor } from "./doctor";
 import type { PortEntry } from "./types";
 
 export async function runCli(argv: string[]): Promise<number> {
@@ -13,6 +14,7 @@ export async function runCli(argv: string[]): Promise<number> {
 
   if (command === "list") return listCommand(args);
   if (command === "kill") return killCommand(args);
+  if (command === "doctor") return doctorCommand();
   if (command === "--help" || command === "-h" || command === "help") {
     printHelp();
     return 0;
@@ -36,6 +38,12 @@ async function listCommand(args: string[]): Promise<number> {
     console.log(formatEntry(entry));
   }
   return 0;
+}
+
+async function doctorCommand(): Promise<number> {
+  const report = await inspectDoctor();
+  console.log(formatDoctorReport(report));
+  return report.primary.available ? 0 : 1;
 }
 
 async function killCommand(args: string[]): Promise<number> {
@@ -78,7 +86,8 @@ function formatEntry(entry: PortEntry): string {
   const pid = entry.pid ? String(entry.pid).padStart(6, " ") : "     -";
   const risk = entry.risk.toUpperCase().padEnd(6, " ");
   const app = entry.app.padEnd(8, " ");
-  return `${entry.protocol.padEnd(4, " ")} ${entry.address}:${entry.port} ${pid} ${app} ${risk} ${entry.cmdline ?? entry.exe ?? ""}`;
+  const container = entry.container ? ` container=${entry.container.engine}:${entry.container.name ?? entry.container.image ?? entry.container.id ?? "unknown"}` : "";
+  return `${entry.protocol.padEnd(4, " ")} ${entry.address}:${entry.port} ${pid} ${app} ${risk} ${entry.cmdline ?? entry.exe ?? ""}${container}`;
 }
 
 function printHelp() {
@@ -87,6 +96,7 @@ function printHelp() {
 Usage:
   portki
   portki list [--json]
+  portki doctor
   portki kill <port|pid> --safe [--force]
 `);
 }

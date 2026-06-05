@@ -49,6 +49,19 @@ const podmanEntry: PortEntry = {
   risk: "high"
 };
 
+const podmanRedisEntry: PortEntry = {
+  ...podmanEntry,
+  port: 6379,
+  container: {
+    engine: "podman",
+    id: "abcdef123456",
+    name: "redis-dev",
+    image: "docker.io/library/redis:7-alpine",
+    ports: [{ hostPort: 6379, containerPort: 6379, protocol: "tcp" }],
+    evidence: ["podman ps", "published port 6379/tcp"]
+  }
+};
+
 const CATPPUCCIN_BASE = [30, 30, 46, 255];
 const CATPPUCCIN_MANTLE = [24, 24, 37, 255];
 const CATPPUCCIN_TEXT = [205, 214, 244, 255];
@@ -151,6 +164,20 @@ describe("PortUi", () => {
     expect(frame).toContain("SIGTERM");
     expect(frame).toContain("3000");
     expect(frame).toContain("y/Enter confirm");
+
+    act(() => setup.renderer.destroy());
+  });
+
+  test("paints modals with a solid terminal background", async () => {
+    const setup = await testRender(<PortUi initialEntries={entries} />, { width: 100, height: 28 });
+
+    await setup.waitForFrame((frame: string) => frame.includes("3000"));
+    act(() => setup.mockInput.pressKey("d"));
+    await setup.flush();
+
+    const spans = setup.captureSpans().lines.flatMap((line) => line.spans);
+    const modalTitle = spans.find((span) => span.text.includes("Kill listener?"));
+    expect(colorBuffer(modalTitle?.bg)).toEqual(DEFAULT_BACKGROUND);
 
     act(() => setup.renderer.destroy());
   });
@@ -314,6 +341,20 @@ describe("PortUi", () => {
     const evidence = spans.find((span) => span.text.includes("Evidence"));
     expect(colorBuffer(cwd?.fg)).not.toEqual(ANSI_DIM);
     expect(colorBuffer(evidence?.fg)).not.toEqual(ANSI_DIM);
+
+    act(() => setup.renderer.destroy());
+  });
+
+  test("renders container image metadata in the inspector", async () => {
+    const setup = await testRender(<PortUi initialEntries={[podmanRedisEntry]} />, { width: 120, height: 32 });
+
+    await setup.waitForFrame((frame: string) => frame.includes("redis-dev"));
+    const frame = setup.captureCharFrame();
+    expect(frame).toContain("Container");
+    expect(frame).toContain("Engine podman");
+    expect(frame).toContain("Name redis-dev");
+    expect(frame).toContain("Image redis:7-alpine");
+    expect(frame).toContain("6379->6379/tcp");
 
     act(() => setup.renderer.destroy());
   });

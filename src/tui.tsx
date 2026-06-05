@@ -33,6 +33,7 @@ const theme = {
   blue: RGBA.fromIndex(12),
   yellow: RGBA.fromIndex(11),
   red: RGBA.fromIndex(9),
+  surface: RGBA.defaultBackground(),
   activeFg: RGBA.fromIndex(0),
   focusBg: RGBA.fromIndex(11),
   selectedBg: RGBA.fromIndex(10),
@@ -284,6 +285,23 @@ function Inspector({ entry }: { entry: PortEntry | undefined }) {
       <text height={1}>
         <span fg={theme.blue}>Evidence</span> {entry.detection.evidence.join(", ") || "no detection evidence"}
       </text>
+      {entry.container ? (
+        <>
+          <text height={1} fg={theme.blue} content="Container" />
+          <text height={1}>
+            <span fg={theme.yellow}>Engine</span> {entry.container.engine}  <span fg={theme.yellow}>Name</span> {entry.container.name ?? "-"}
+          </text>
+          <text height={1}>
+            <span fg={theme.blue}>Image</span> {shortImageName(entry.container.image)}
+          </text>
+          <text height={1}>
+            <span fg={theme.blue}>Ports</span> {entry.container.ports.map(formatContainerPort).join(", ") || "-"}
+          </text>
+          <text height={1}>
+            <span fg={theme.blue}>Container evidence</span> {entry.container.evidence.join(", ")}
+          </text>
+        </>
+      ) : null}
       {entry.permissionDenied ? <text height={1} fg={theme.yellow} content="Permissions partial /proc data" /> : null}
     </>
   );
@@ -365,6 +383,7 @@ function CenterModal({ title, height, hot, children }: { title: string; height: 
       border
       borderStyle={cardBorderStyle}
       borderColor={hot ? theme.borderHot : theme.border}
+      backgroundColor={theme.surface}
       title={title}
       flexDirection="column"
       paddingLeft={1}
@@ -642,6 +661,17 @@ function bar(count: number, total: number): string {
   const width = 12;
   const filled = total > 0 ? Math.max(1, Math.round((count / total) * width)) : 0;
   return `${"█".repeat(filled)}${"░".repeat(width - filled)}`;
+}
+
+function formatContainerPort(port: NonNullable<PortEntry["container"]>["ports"][number]): string {
+  const protocol = port.protocol ?? "tcp";
+  return `${port.hostPort}->${port.containerPort ?? "?"}/${protocol}`;
+}
+
+function shortImageName(image: string | undefined): string {
+  if (!image) return "-";
+  const withoutDigest = image.split("@")[0] ?? image;
+  return withoutDigest.split("/").at(-1) ?? withoutDigest;
 }
 
 function keyText(key: KeyEvent): string | undefined {
