@@ -26,13 +26,15 @@ It is built for developer machines where ports are constantly occupied by Next.j
 
 ## Install
 
+Install from the GitHub source:
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ricardojparram/portki/main/install.sh | sh
 ```
 
-The install script installs Bun automatically if it is not already available.
+The install script installs Bun automatically if it is not already available, clones this repository, builds `portki`, and installs it globally from the local checkout.
 
-Manual npm install:
+After `portki` is published to npm, manual npm install will also be available:
 
 ```sh
 npm install -g portki

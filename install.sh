@@ -1,6 +1,9 @@
 #!/usr/bin/env sh
 set -eu
 
+PORTKI_REPO="${PORTKI_REPO:-https://github.com/ricardojparram/portki.git}"
+PORTKI_REF="${PORTKI_REF:-main}"
+
 if [ "$(uname -s)" != "Linux" ]; then
   printf '%s\n' "portki currently supports Linux only."
   exit 1
@@ -21,6 +24,12 @@ fi
 if ! command -v npm >/dev/null 2>&1; then
   printf '%s\n' "portki installs through npm, but npm was not found."
   printf '%s\n' "Install npm, then run this installer again."
+  exit 127
+fi
+
+if ! command -v git >/dev/null 2>&1; then
+  printf '%s\n' "portki installs from GitHub for now, but git was not found."
+  printf '%s\n' "Install git, then run this installer again."
   exit 127
 fi
 
@@ -47,8 +56,17 @@ if ! command -v bun >/dev/null 2>&1; then
   fi
 fi
 
-printf '%s\n' "Installing portki..."
-npm install -g portki
+WORKDIR=$(mktemp -d)
+PORTKI_DIR="$WORKDIR/portki"
+trap 'rm -rf "$WORKDIR"' EXIT HUP INT TERM
+
+printf '%s\n' "Installing portki from GitHub..."
+git clone --depth 1 --branch "$PORTKI_REF" "$PORTKI_REPO" "$PORTKI_DIR"
+
+cd "$PORTKI_DIR"
+bun install --frozen-lockfile
+bun run build
+npm install -g "$PORTKI_DIR"
 
 if ! command -v portki >/dev/null 2>&1; then
   printf '%s\n' "portki installed, but it was not found on PATH."

@@ -67,12 +67,18 @@ describe("npm package readiness", () => {
     const installScript = await readFile(installScriptPath, "utf8");
 
     await access(installScriptPath);
-    expect(installScript).toContain("npm install -g portki");
+    expect(installScript).toContain("PORTKI_REPO=");
+    expect(installScript).toContain("git clone");
+    expect(installScript).toContain("bun install --frozen-lockfile");
+    expect(installScript).toContain("bun run build");
+    expect(installScript).toContain('npm install -g "$PORTKI_DIR"');
     expect(installScript).toContain("command -v node");
     expect(installScript).toContain("command -v npm");
+    expect(installScript).toContain("command -v git");
     expect(installScript).toContain("command -v bun");
     expect(installScript).toContain("command -v curl");
     expect(installScript).toContain("curl -fsSL https://bun.sh/install");
+    expect(installScript).not.toContain("npm install -g portki");
     expect(installScript).not.toContain("sudo");
     expect(installScript).toContain("https://bun.sh");
   });
