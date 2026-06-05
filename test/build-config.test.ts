@@ -3,13 +3,16 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 describe("build config", () => {
-  test("keeps React external so OpenTUI and the app share one React dispatcher", async () => {
+  test("builds a Node-compatible bundle and keeps native OpenTUI packages external", async () => {
     const packageJson = JSON.parse(await readFile(join(import.meta.dir, "..", "package.json"), "utf8")) as {
       scripts: { build: string };
     };
 
-    expect(packageJson.scripts.build).toContain("--external react");
-    expect(packageJson.scripts.build).toContain("--external react/jsx-runtime");
-    expect(packageJson.scripts.build).toContain("--external react/jsx-dev-runtime");
+    expect(packageJson.scripts.build).toContain("--target node");
+    expect(packageJson.scripts.build).not.toContain("--target bun");
+    expect(packageJson.scripts.build).not.toContain("--external react");
+    expect(packageJson.scripts.build).not.toContain("--external @opentui/react");
+    expect(packageJson.scripts.build).toContain("--external @opentui/core-linux-x64");
+    expect(packageJson.scripts.build).toContain("--external @opentui/core-linux-x64-musl");
   });
 });

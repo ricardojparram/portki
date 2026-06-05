@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 set -eu
 
-if ! command -v bun >/dev/null 2>&1; then
-  printf '%s\n' 'portki requires Bun at runtime.'
-  printf '%s\n' 'Install it from https://bun.sh, then run portki again.'
+if ! command -v node >/dev/null 2>&1; then
+  printf '%s\n' 'portki requires Node.js at runtime.'
+  printf '%s\n' 'Install Node.js 20 or newer, then run portki again.'
   exit 127
 fi
 
@@ -18,4 +18,4 @@ while [ -L "$SCRIPT" ]; do
 done
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$SCRIPT")" && pwd -P)
-exec bun "$SCRIPT_DIR/../dist/index.js" "$@"
+exec node "$SCRIPT_DIR/../dist/index.js" "$@"

@@ -52,8 +52,11 @@ const podmanEntry: PortEntry = {
 const CATPPUCCIN_BASE = [30, 30, 46, 255];
 const CATPPUCCIN_MANTLE = [24, 24, 37, 255];
 const CATPPUCCIN_TEXT = [205, 214, 244, 255];
+const DEFAULT_BACKGROUND = [0, 0, 0, 255];
+const DEFAULT_FOREGROUND = [255, 255, 255, 255];
 
-function colorBuffer(spanColor: { buffer?: Uint16Array } | undefined): number[] | undefined {
+function colorBuffer(spanColor: { toInts?: () => [number, number, number, number]; buffer?: Uint16Array } | undefined): number[] | undefined {
+  if (spanColor?.toInts) return spanColor.toInts();
   return spanColor?.buffer ? Array.from(spanColor.buffer) : undefined;
 }
 
@@ -204,7 +207,7 @@ describe("PortUi", () => {
     act(() => setup.renderer.destroy());
   });
 
-  test("keeps focus styling visible when the focused row is selected without Catppuccin RGB assumptions", async () => {
+  test("keeps selected and focused rows visible without Catppuccin RGB assumptions", async () => {
     const setup = await testRender(<PortUi initialEntries={entries} />, { width: 100, height: 28 });
 
     await setup.waitForFrame((frame: string) => frame.includes("3000"));
@@ -217,10 +220,12 @@ describe("PortUi", () => {
     const nextRow = frame.lines.flatMap((line) => line.spans).find((span) => span.text.includes("[NEXT]"));
     const postgresRow = frame.lines.flatMap((line) => line.spans).find((span) => span.text.includes("[PG]"));
 
-    expect(nextRow ? nextRow.attributes & TextAttributes.UNDERLINE : 0).toBe(TextAttributes.UNDERLINE);
-    expect(nextRow ? nextRow.attributes & TextAttributes.INVERSE : 0).toBe(0);
-    expect(postgresRow ? postgresRow.attributes & TextAttributes.UNDERLINE : 0).toBe(TextAttributes.UNDERLINE);
-    expect(postgresRow ? postgresRow.attributes & TextAttributes.INVERSE : 0).toBe(TextAttributes.INVERSE);
+    expect(nextRow ? nextRow.attributes & TextAttributes.BOLD : 0).toBe(TextAttributes.BOLD);
+    expect(postgresRow ? postgresRow.attributes & TextAttributes.BOLD : 0).toBe(TextAttributes.BOLD);
+    expect(colorBuffer(nextRow?.bg)).toBeDefined();
+    expect(colorBuffer(postgresRow?.bg)).toEqual(DEFAULT_FOREGROUND);
+    expect(colorBuffer(postgresRow?.fg)).toEqual(DEFAULT_BACKGROUND);
+    expect(colorBuffer(nextRow?.bg)).not.toEqual(colorBuffer(postgresRow?.bg));
     expect(colorBuffer(nextRow?.bg)).not.toEqual(CATPPUCCIN_BASE);
     expect(colorBuffer(postgresRow?.bg)).not.toEqual(CATPPUCCIN_BASE);
 
@@ -250,6 +255,31 @@ describe("PortUi", () => {
 
     expect(backgrounds).not.toContainEqual(CATPPUCCIN_BASE);
     expect(backgrounds).not.toContainEqual(CATPPUCCIN_MANTLE);
+
+    act(() => setup.renderer.destroy());
+  });
+
+  test("uses the full terminal viewport without outer padding", async () => {
+    const setup = await testRender(<PortUi initialEntries={entries} />, { width: 80, height: 24 });
+
+    await setup.waitForFrame((frame: string) => frame.includes("3000"));
+    const firstLine = setup.captureCharFrame().split("\n")[0] ?? "";
+
+    expect(firstLine.trimStart().startsWith("╭")).toBe(true);
+
+    act(() => setup.renderer.destroy());
+  });
+
+  test("renders table headers with normal contrast instead of dim text", async () => {
+    const setup = await testRender(<PortUi initialEntries={entries} />, { width: 100, height: 28 });
+
+    await setup.waitForFrame((frame: string) => frame.includes("3000"));
+    const frame = setup.captureSpans();
+    const riskHeader = frame.lines.flatMap((line) => line.spans).find((span) => span.text.includes("RISK"));
+    const visibleCount = frame.lines.flatMap((line) => line.spans).find((span) => span.text.includes("visible listeners"));
+
+    expect(riskHeader ? riskHeader.attributes & TextAttributes.BOLD : 0).toBe(TextAttributes.BOLD);
+    expect(visibleCount ? visibleCount.attributes & TextAttributes.DIM : 0).toBe(0);
 
     act(() => setup.renderer.destroy());
   });

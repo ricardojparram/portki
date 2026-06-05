@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { stat, readFile } from "node:fs/promises";
+import { access, stat, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 type PackageJson = {
@@ -15,6 +15,7 @@ type PackageJson = {
   bugs?: { url?: string };
   homepage?: string;
   publishConfig?: { access?: string };
+  engines?: Record<string, string>;
 };
 
 async function readPackageJson(): Promise<PackageJson> {
@@ -33,6 +34,8 @@ describe("npm package readiness", () => {
     expect(packageJson.bugs?.url).toContain("github.com/ricardojparram/portki/issues");
     expect(packageJson.homepage).toContain("github.com/ricardojparram/portki");
     expect(packageJson.publishConfig?.access).toBe("public");
+    expect(packageJson.engines?.node).toBeDefined();
+    expect(packageJson.engines?.bun).toBeUndefined();
   });
 
   test("keeps the npm tarball intentionally small", async () => {
@@ -57,5 +60,17 @@ describe("npm package readiness", () => {
 
     expect(wrapper.isFile()).toBe(true);
     expect(wrapper.mode & 0o111).not.toBe(0);
+  });
+
+  test("ships a curl-friendly install script", async () => {
+    const installScriptPath = join(import.meta.dir, "..", "install.sh");
+    const installScript = await readFile(installScriptPath, "utf8");
+
+    await access(installScriptPath);
+    expect(installScript).toContain("npm install -g portki");
+    expect(installScript).toContain("command -v node");
+    expect(installScript).toContain("command -v npm");
+    expect(installScript).not.toContain("sudo");
+    expect(installScript).not.toContain("bun.sh");
   });
 });

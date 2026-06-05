@@ -25,17 +25,32 @@ describe("bin/portki", () => {
     await mkdir(join(packageRoot, "bin"), { recursive: true });
     await mkdir(join(packageRoot, "dist"), { recursive: true });
     await mkdir(globalBin, { recursive: true });
+    const marker = join(root, "marker.txt");
 
     await writeFile(join(packageRoot, "bin", "portki"), await readFile(join(import.meta.dir, "..", "bin", "portki"), "utf8"));
     await chmod(join(packageRoot, "bin", "portki"), 0o755);
-    await writeFile(join(packageRoot, "dist", "index.js"), "console.log('wrapper-ok', process.argv.slice(2).join(','));\n");
+    await writeFile(
+      join(packageRoot, "dist", "index.js"),
+      "import { writeFileSync } from 'node:fs';\nwriteFileSync(process.env.PORTKI_WRAPPER_MARKER, process.argv.slice(2).join(','));\n"
+    );
     await symlink("../lib/node_modules/portki/bin/portki", join(globalBin, "portki"));
 
     const result = spawnSync(join(globalBin, "portki"), ["list", "--json"], {
-      encoding: "utf8"
+      encoding: "utf8",
+      env: { ...process.env, PORTKI_WRAPPER_MARKER: marker }
     });
 
     expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe("wrapper-ok list,--json");
+    expect(await readFile(marker, "utf8")).toBe("list,--json");
+  });
+
+  test("uses Node as the runtime instead of Bun", async () => {
+    const wrapper = await readFile(join(import.meta.dir, "..", "bin", "portki"), "utf8");
+
+    expect(wrapper).toContain("command -v node");
+    expect(wrapper).toContain("exec node");
+    expect(wrapper).not.toContain("command -v bun");
+    expect(wrapper).not.toContain("exec bun");
+    expect(wrapper).not.toContain("requires Bun");
   });
 });

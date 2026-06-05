@@ -1,7 +1,7 @@
 {
   "name": "portki",
   "version": "0.1.0",
-  "description": "A Bun-powered TUI for inspecting and safely stopping local port listeners.",
+  "description": "A Node-powered TUI for inspecting and safely stopping local port listeners.",
   "type": "module",
   "license": "MIT",
   "author": "Ricardo <ricardojparram@users.noreply.github.com>",
@@ -29,7 +29,7 @@
   "scripts": {
     "test": "bun test",
     "check": "tsc --noEmit",
-    "build": "bun build ./src/index.tsx --outdir ./dist --target bun --format esm --external react --external react/jsx-runtime --external react/jsx-dev-runtime --external @opentui/core --external @opentui/react --external @opentui/keymap",
+    "build": "bun build ./src/index.tsx --outdir ./dist --target node --format esm --external @opentui/core-darwin-x64 --external @opentui/core-darwin-arm64 --external @opentui/core-linux-arm64-musl --external @opentui/core-linux-arm64 --external @opentui/core-win32-x64 --external @opentui/core-win32-arm64 --external @opentui/core-linux-x64 --external @opentui/core-linux-x64-musl",
     "pack:dry-run": "npm --cache /tmp/portki-npm-cache pack --dry-run --json",
     "release:check": "bun run check && bun test && bun run build && npm --cache /tmp/portki-npm-cache pack --dry-run --json",
     "prepack": "bun run build"
@@ -46,7 +46,7 @@
     "typescript": "6.0.3"
   },
   "engines": {
-    "bun": ">=1.1.0"
+    "node": ">=20.0.0"
   },
   "os": [
     "linux"

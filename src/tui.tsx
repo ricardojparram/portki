@@ -32,7 +32,11 @@ const theme = {
   green: RGBA.fromIndex(2),
   blue: RGBA.fromIndex(4),
   yellow: RGBA.fromIndex(3),
-  red: RGBA.fromIndex(1)
+  red: RGBA.fromIndex(1),
+  focusBg: RGBA.defaultForeground(),
+  focusFg: RGBA.defaultBackground(),
+  selectedBg: RGBA.fromIndex(2),
+  selectedFg: RGBA.defaultBackground()
 };
 
 const cardBorderStyle = "rounded";
@@ -114,7 +118,7 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
     <box width="100%" height="100%" flexDirection="column">
       <Header total={state.entries.length} filtered={filtered.length} filter={effectiveFilter} status={state.status} />
 
-      <box flexGrow={1} flexDirection="row" paddingLeft={1} paddingRight={1} gap={1}>
+      <box flexGrow={1} flexDirection="row" gap={1}>
         <box
           title="Listeners"
           bottomTitle={`${selectedPosition} of ${filtered.length}`}
@@ -127,7 +131,7 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
           paddingLeft={1}
           paddingRight={1}
         >
-          <text height={1} fg={theme.dim} content="RISK  APP      PORT   PID     COMMAND" />
+          <text height={1} attributes={TextAttributes.BOLD} content="RISK  APP      PORT   PID     COMMAND" />
           {rows.map(({ entry, index }) => (
             <ListenerRow
               key={`${entry.protocol}:${entry.inode}:${entry.pid ?? "none"}`}
@@ -176,7 +180,7 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
 
 function Header({ total, filtered, filter, status }: { total: number; filtered: number; filter: string; status: string }) {
   return (
-    <box height={6} flexDirection="row" paddingLeft={1} paddingRight={1} paddingTop={1}>
+    <box height={5} flexDirection="row">
       <box
         flexGrow={1}
         border
@@ -187,7 +191,7 @@ function Header({ total, filtered, filter, status }: { total: number; filtered: 
       >
         <text height={1} fg={theme.green} content="PORTKI" />
         <text height={1} content="local port inspector" />
-        <text height={1} fg={theme.dim} content={`showing ${filtered}/${total}  |  filter ${filter || "off"}  |  ${status}`} />
+        <text height={1} content={`showing ${filtered}/${total}  |  filter ${filter || "off"}  |  ${status}`} />
       </box>
     </box>
   );
@@ -197,7 +201,7 @@ function Footer({ state }: { state: TuiState }) {
   const selectedText = state.selectedKeys.length > 0 ? ` | Selected ${state.selectedKeys.length}` : "";
   const modeText = modeLine(state) === "normal" ? "" : `  ${modeLine(state)}`;
   return (
-    <box height={1} paddingLeft={1} paddingRight={1}>
+    <box height={1}>
       <text height={1} fg={theme.dim}>
         <span fg={theme.blue}>Move:</span> <span fg={theme.yellow}>j/k</span>
         <span fg={theme.dim}> | </span>
@@ -219,9 +223,9 @@ function Footer({ state }: { state: TuiState }) {
 }
 
 function ListenerRow({ entry, focused, marked }: { entry: PortEntry; focused: boolean; marked: boolean }) {
-  const attributes =
-    (marked ? TextAttributes.BOLD | TextAttributes.UNDERLINE : TextAttributes.NONE) |
-    (focused ? TextAttributes.INVERSE : TextAttributes.NONE);
+  const attributes = marked || focused ? TextAttributes.BOLD : TextAttributes.NONE;
+  const fg = focused ? theme.focusFg : marked ? theme.selectedFg : riskColor(entry.risk);
+  const bg = focused ? theme.focusBg : marked ? theme.selectedBg : undefined;
   const content = [
     riskBadge(entry.risk).padEnd(5),
     appBadge(entry.app).padEnd(8),
@@ -230,7 +234,8 @@ function ListenerRow({ entry, focused, marked }: { entry: PortEntry; focused: bo
     commandLabel(entry).slice(0, 34)
   ].join(" ");
 
-  return <text height={1} wrapMode="none" truncate fg={riskColor(entry.risk)} attributes={attributes} content={content} />;
+  if (bg) return <text height={1} wrapMode="none" truncate fg={fg} bg={bg} attributes={attributes} content={content} />;
+  return <text height={1} wrapMode="none" truncate fg={fg} attributes={attributes} content={content} />;
 }
 
 function Inspector({ entry }: { entry: PortEntry | undefined }) {
@@ -262,7 +267,7 @@ function AppSummary({ appCounts, total }: { appCounts: Array<[string, number]>; 
   return (
     <>
       <text height={1} fg={theme.blue} content="Apps in current list" />
-      <text height={1} fg={theme.dim} content={`${total} visible listeners`} />
+      <text height={1} content={`${total} visible listeners`} />
       {appCounts.slice(0, 6).map(([app, count]) => (
         <text key={app} height={1} content={`${app.padEnd(9)} ${bar(count, total)} ${count}`} />
       ))}
