@@ -71,6 +71,8 @@ describe("npm package readiness", () => {
     expect(installScript).toContain("command -v node");
     expect(installScript).toContain("command -v npm");
     expect(installScript).toContain("command -v bun");
+    expect(installScript).toContain("command -v curl");
+    expect(installScript).toContain("curl -fsSL https://bun.sh/install");
     expect(installScript).not.toContain("sudo");
     expect(installScript).toContain("https://bun.sh");
   });

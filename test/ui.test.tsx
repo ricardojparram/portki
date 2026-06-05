@@ -54,6 +54,8 @@ const CATPPUCCIN_MANTLE = [24, 24, 37, 255];
 const CATPPUCCIN_TEXT = [205, 214, 244, 255];
 const DEFAULT_BACKGROUND = [0, 0, 0, 255];
 const DEFAULT_FOREGROUND = [255, 255, 255, 255];
+const ANSI_BLACK = [0, 0, 0, 255];
+const ANSI_DIM = [128, 128, 128, 255];
 
 function colorBuffer(spanColor: { toInts?: () => [number, number, number, number]; buffer?: Uint16Array } | undefined): number[] | undefined {
   if (spanColor?.toInts) return spanColor.toInts();
@@ -223,9 +225,12 @@ describe("PortUi", () => {
     expect(nextRow ? nextRow.attributes & TextAttributes.BOLD : 0).toBe(TextAttributes.BOLD);
     expect(postgresRow ? postgresRow.attributes & TextAttributes.BOLD : 0).toBe(TextAttributes.BOLD);
     expect(colorBuffer(nextRow?.bg)).toBeDefined();
-    expect(colorBuffer(postgresRow?.bg)).toEqual(DEFAULT_FOREGROUND);
-    expect(colorBuffer(postgresRow?.fg)).toEqual(DEFAULT_BACKGROUND);
+    expect(colorBuffer(postgresRow?.bg)).toBeDefined();
+    expect(colorBuffer(nextRow?.fg)).toEqual(ANSI_BLACK);
+    expect(colorBuffer(postgresRow?.fg)).toEqual(ANSI_BLACK);
     expect(colorBuffer(nextRow?.bg)).not.toEqual(colorBuffer(postgresRow?.bg));
+    expect(colorBuffer(postgresRow?.bg)).not.toEqual(DEFAULT_FOREGROUND);
+    expect(colorBuffer(postgresRow?.fg)).not.toEqual(DEFAULT_FOREGROUND);
     expect(colorBuffer(nextRow?.bg)).not.toEqual(CATPPUCCIN_BASE);
     expect(colorBuffer(postgresRow?.bg)).not.toEqual(CATPPUCCIN_BASE);
 
@@ -303,6 +308,12 @@ describe("PortUi", () => {
     expect(frame).toContain("Risk !! High");
     expect(frame).toContain("Port 8080");
     expect(frame).not.toContain("[POD] [!!] port 8080");
+
+    const spans = setup.captureSpans().lines.flatMap((line) => line.spans);
+    const cwd = spans.find((span) => span.text.includes("CWD"));
+    const evidence = spans.find((span) => span.text.includes("Evidence"));
+    expect(colorBuffer(cwd?.fg)).not.toEqual(ANSI_DIM);
+    expect(colorBuffer(evidence?.fg)).not.toEqual(ANSI_DIM);
 
     act(() => setup.renderer.destroy());
   });

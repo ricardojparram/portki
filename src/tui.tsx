@@ -27,16 +27,16 @@ interface PortUiProps {
 
 const theme = {
   border: RGBA.defaultForeground(),
-  borderHot: RGBA.fromIndex(6),
-  dim: RGBA.fromIndex(8),
-  green: RGBA.fromIndex(2),
-  blue: RGBA.fromIndex(4),
-  yellow: RGBA.fromIndex(3),
-  red: RGBA.fromIndex(1),
-  focusBg: RGBA.defaultForeground(),
-  focusFg: RGBA.defaultBackground(),
-  selectedBg: RGBA.fromIndex(2),
-  selectedFg: RGBA.defaultBackground()
+  borderHot: RGBA.fromIndex(14),
+  dim: RGBA.fromIndex(7),
+  green: RGBA.fromIndex(10),
+  blue: RGBA.fromIndex(12),
+  yellow: RGBA.fromIndex(11),
+  red: RGBA.fromIndex(9),
+  activeFg: RGBA.fromIndex(0),
+  focusBg: RGBA.fromIndex(11),
+  selectedBg: RGBA.fromIndex(10),
+  selectedFocusBg: RGBA.fromIndex(14)
 };
 
 const cardBorderStyle = "rounded";
@@ -224,15 +224,15 @@ function Footer({ state }: { state: TuiState }) {
 
 function ListenerRow({ entry, focused, marked }: { entry: PortEntry; focused: boolean; marked: boolean }) {
   const attributes = marked || focused ? TextAttributes.BOLD : TextAttributes.NONE;
-  const fg = focused ? theme.focusFg : marked ? theme.selectedFg : riskColor(entry.risk);
-  const bg = focused ? theme.focusBg : marked ? theme.selectedBg : undefined;
+  const fg = focused || marked ? theme.activeFg : riskColor(entry.risk);
+  const bg = focused && marked ? theme.selectedFocusBg : focused ? theme.focusBg : marked ? theme.selectedBg : undefined;
   const content = [
     riskBadge(entry.risk).padEnd(5),
     appBadge(entry.app).padEnd(8),
     String(entry.port).padStart(5),
     String(entry.pid ?? "-").padStart(7),
     commandLabel(entry).slice(0, 34)
-  ].join(" ");
+  ].join(" ").padEnd(180);
 
   if (bg) return <text height={1} wrapMode="none" truncate fg={fg} bg={bg} attributes={attributes} content={content} />;
   return <text height={1} wrapMode="none" truncate fg={fg} attributes={attributes} content={content} />;
@@ -250,15 +250,31 @@ function Inspector({ entry }: { entry: PortEntry | undefined }) {
 
   return (
     <>
-      <text height={1} fg={theme.green} content={`App ${appName(entry.app)}`} />
-      <text height={1} fg={riskColor(entry.risk)} content={`Risk ${riskSymbol(entry.risk)} ${riskLabel(entry.risk)}`} />
-      <text height={1} fg={theme.yellow} content={`Port ${entry.port}  PID ${entry.pid ?? "-"}`} />
-      <text height={1} content={`Endpoint ${entry.protocol.toUpperCase()} ${entry.address}:${entry.port}`} />
-      <text height={1} fg={theme.dim} content={`Inode ${entry.inode}  Detection ${Math.round(entry.detection.confidence * 100)}%`} />
+      <text height={1}>
+        <span fg={theme.green}>App</span> {appName(entry.app)}
+      </text>
+      <text height={1}>
+        <span fg={riskColor(entry.risk)}>Risk {riskSymbol(entry.risk)}</span> {riskLabel(entry.risk)}
+      </text>
+      <text height={1}>
+        <span fg={theme.yellow}>Port</span> {entry.port}  <span fg={theme.yellow}>PID</span> {entry.pid ?? "-"}
+      </text>
+      <text height={1}>
+        <span fg={theme.blue}>Endpoint</span> {entry.protocol.toUpperCase()} {entry.address}:{entry.port}
+      </text>
+      <text height={1}>
+        <span fg={theme.blue}>Inode</span> {entry.inode}  <span fg={theme.blue}>Detection</span> {Math.round(entry.detection.confidence * 100)}%
+      </text>
       <text height={1} fg={theme.blue} content="Process" />
-      <text height={1} content={`Command ${entry.cmdline ?? entry.exe ?? "-"}`} />
-      <text height={1} fg={theme.dim} content={`CWD ${entry.cwd ?? "-"}`} />
-      <text height={1} fg={theme.dim} content={`Evidence ${entry.detection.evidence.join(", ") || "no detection evidence"}`} />
+      <text height={1}>
+        <span fg={theme.yellow}>Command</span> {entry.cmdline ?? entry.exe ?? "-"}
+      </text>
+      <text height={1}>
+        <span fg={theme.blue}>CWD</span> {entry.cwd ?? "-"}
+      </text>
+      <text height={1}>
+        <span fg={theme.blue}>Evidence</span> {entry.detection.evidence.join(", ") || "no detection evidence"}
+      </text>
     </>
   );
 }

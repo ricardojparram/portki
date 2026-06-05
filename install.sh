@@ -25,10 +25,26 @@ if ! command -v npm >/dev/null 2>&1; then
 fi
 
 if ! command -v bun >/dev/null 2>&1; then
-  printf '%s\n' "portki's TUI currently requires Bun because OpenTUI uses Bun FFI."
-  printf '%s\n' "Install Bun from https://bun.sh, then run this installer again."
-  printf '%s\n' "Standalone binary releases are planned so this requirement can go away."
-  exit 127
+  if ! command -v curl >/dev/null 2>&1; then
+    printf '%s\n' "portki's TUI currently requires Bun, but curl was not found."
+    printf '%s\n' "Install curl or install Bun from https://bun.sh, then run this installer again."
+    exit 127
+  fi
+
+  printf '%s\n' "Bun was not found. Installing Bun..."
+  curl -fsSL https://bun.sh/install | sh
+
+  BUN_BIN="${BUN_INSTALL:-$HOME/.bun}/bin"
+  if [ -d "$BUN_BIN" ]; then
+    PATH="$BUN_BIN:$PATH"
+    export PATH
+  fi
+
+  if ! command -v bun >/dev/null 2>&1; then
+    printf '%s\n' "Bun was installed, but it was not found on PATH for this shell."
+    printf '%s\n' "Add $BUN_BIN to PATH, then run portki."
+    exit 1
+  fi
 fi
 
 printf '%s\n' "Installing portki..."
