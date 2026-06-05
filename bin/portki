@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+set -eu
+
+if ! command -v bun >/dev/null 2>&1; then
+  printf '%s\n' 'portki requires Bun at runtime.'
+  printf '%s\n' 'Install it from https://bun.sh, then run portki again.'
+  exit 127
+fi
+
+SCRIPT=$0
+while [ -L "$SCRIPT" ]; do
+  SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$SCRIPT")" && pwd -P)
+  LINK=$(readlink "$SCRIPT")
+  case "$LINK" in
+    /*) SCRIPT=$LINK ;;
+    *) SCRIPT=$SCRIPT_DIR/$LINK ;;
+  esac
+done
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$SCRIPT")" && pwd -P)
+exec bun "$SCRIPT_DIR/../dist/index.js" "$@"

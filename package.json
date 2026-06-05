@@ -1,0 +1,63 @@
+{
+  "name": "portki",
+  "version": "0.1.0",
+  "description": "A Bun-powered TUI for inspecting and safely stopping local port listeners.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Ricardo <ricardojparram@users.noreply.github.com>",
+  "homepage": "https://github.com/ricardojparram/portki#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ricardojparram/portki.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ricardojparram/portki/issues"
+  },
+  "keywords": [
+    "ports",
+    "tui",
+    "linux",
+    "procfs",
+    "opentui",
+    "bun",
+    "kill-port",
+    "developer-tools"
+  ],
+  "bin": {
+    "portki": "./bin/portki"
+  },
+  "scripts": {
+    "test": "bun test",
+    "check": "tsc --noEmit",
+    "build": "bun build ./src/index.tsx --outdir ./dist --target bun --format esm --external react --external react/jsx-runtime --external react/jsx-dev-runtime --external @opentui/core --external @opentui/react --external @opentui/keymap",
+    "pack:dry-run": "npm --cache /tmp/portki-npm-cache pack --dry-run --json",
+    "release:check": "bun run check && bun test && bun run build && npm --cache /tmp/portki-npm-cache pack --dry-run --json",
+    "prepack": "bun run build"
+  },
+  "dependencies": {
+    "@opentui/core": "0.3.2",
+    "@opentui/keymap": "0.3.2",
+    "@opentui/react": "0.3.2",
+    "react": "19.2.7"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.14",
+    "@types/react": "19.2.16",
+    "typescript": "6.0.3"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  },
+  "os": [
+    "linux"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
+}

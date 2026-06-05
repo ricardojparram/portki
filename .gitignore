@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.codegraph/
+.worktrees/
+*.tgz
+.DS_Store
+npm-debug.log*
+bun-debug.log*

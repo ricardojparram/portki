@@ -1,0 +1,92 @@
+import { scanPorts } from "./procfs";
+import { executeKillPlan, planKill } from "./kill-policy";
+import type { PortEntry } from "./types";
+
+export async function runCli(argv: string[]): Promise<number> {
+  const [command, ...args] = argv;
+
+  if (!command) {
+    const { runTui } = await import("./tui");
+    await runTui();
+    return 0;
+  }
+
+  if (command === "list") return listCommand(args);
+  if (command === "kill") return killCommand(args);
+  if (command === "--help" || command === "-h" || command === "help") {
+    printHelp();
+    return 0;
+  }
+
+  console.error(`Unknown command: ${command}`);
+  printHelp();
+  return 2;
+}
+
+async function listCommand(args: string[]): Promise<number> {
+  const json = args.includes("--json");
+  const entries = await scanPorts();
+
+  if (json) {
+    console.log(JSON.stringify(entries, null, 2));
+    return 0;
+  }
+
+  for (const entry of entries) {
+    console.log(formatEntry(entry));
+  }
+  return 0;
+}
+
+async function killCommand(args: string[]): Promise<number> {
+  const target = args.find((arg) => !arg.startsWith("-"));
+  const safe = args.includes("--safe");
+  const force = args.includes("--force");
+
+  if (!target) {
+    console.error("Usage: portki kill <port|pid> --safe [--force]");
+    return 2;
+  }
+  if (!safe) {
+    console.error("Refusing non-TUI kill without --safe.");
+    return 2;
+  }
+
+  const numericTarget = Number.parseInt(target, 10);
+  if (!Number.isFinite(numericTarget)) {
+    console.error(`Invalid target: ${target}`);
+    return 2;
+  }
+
+  const entries = await scanPorts();
+  const entry =
+    entries.find((candidate) => candidate.port === numericTarget) ??
+    entries.find((candidate) => candidate.pid === numericTarget) ??
+    ({ pid: numericTarget } as PortEntry);
+
+  const plan = planKill(entry);
+  const result = await executeKillPlan(plan, {
+    confirmed: true,
+    forceConfirmed: force
+  });
+
+  console.log(JSON.stringify({ plan, result }, null, 2));
+  return result.status === "terminated" || result.status === "killed" ? 0 : 1;
+}
+
+function formatEntry(entry: PortEntry): string {
+  const pid = entry.pid ? String(entry.pid).padStart(6, " ") : "     -";
+  const risk = entry.risk.toUpperCase().padEnd(6, " ");
+  const app = entry.app.padEnd(8, " ");
+  return `${entry.protocol.padEnd(4, " ")} ${entry.address}:${entry.port} ${pid} ${app} ${risk} ${entry.cmdline ?? entry.exe ?? ""}`;
+}
+
+function printHelp() {
+  console.log(`portki
+
+Usage:
+  portki
+  portki list [--json]
+  portki kill <port|pid> --safe [--force]
+`);
+}
