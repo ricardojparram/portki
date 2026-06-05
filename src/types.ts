@@ -31,6 +31,17 @@ export type AppKind =
   | "ssh"
   | "dns"
   | "web"
+  | "dhcp"
+  | "chrony"
+  | "cups"
+  | "mdns"
+  | "llmnr"
+  | "gsconnect"
+  | "wsdd"
+  | "engram"
+  | "opendesign"
+  | "passim"
+  | "system"
   | "program"
   | "unknown";
 

@@ -312,9 +312,14 @@ function AppSummary({ appCounts, total }: { appCounts: Array<[string, number]>; 
     <>
       <text height={1} fg={theme.blue} content="Apps in current list" />
       <text height={1} content={`${total} visible listeners`} />
-      {appCounts.slice(0, 6).map(([app, count]) => (
-        <text key={app} height={1} content={`${app.padEnd(9)} ${bar(count, total)} ${count}`} />
-      ))}
+      {appCounts.slice(0, 6).map(([app, count]) => {
+        const { filled, empty } = barParts(count, total);
+        return (
+          <text key={app} height={1}>
+            {app.padEnd(9)} <span fg={appColor(app)}>{filled}</span><span fg={theme.dim}>{empty}</span> {count}
+          </text>
+        );
+      })}
     </>
   );
 }
@@ -365,9 +370,19 @@ function ConfirmModal({ entries, force }: { entries: PortEntry[]; force: boolean
       <text fg={force ? theme.red : theme.yellow}>{`${signal} ${entries.length} selected listener${entries.length === 1 ? "" : "s"}`}</text>
       <text>{entries.length === 1 && primary ? `${primary.protocol.toUpperCase()} ${primary.address}:${primary.port}  pid ${primary.pid ?? "-"}` : `ports ${ports}`}</text>
       <text fg={theme.dim}>{entries.length === 1 && primary ? commandLabel(primary).slice(0, 92) : `${entries.length} processes will receive ${signal}`}</text>
-      <text fg={theme.dim}>y/Enter confirm   n/Esc cancel</text>
       {entries.some((entry) => entry.risk === "high") ? <text fg={theme.red}>High-risk target. Double-check before confirming.</text> : null}
+      <ModalKeyFooter />
     </CenterModal>
+  );
+}
+
+function ModalKeyFooter() {
+  return (
+    <text height={1}>
+      <span fg={theme.blue}>Confirm:</span> <span fg={theme.yellow}>y/Enter</span>
+      <span fg={theme.dim}> | </span>
+      <span fg={theme.blue}>Cancel:</span> <span fg={theme.yellow}>n/Esc</span>
+    </text>
   );
 }
 
@@ -589,6 +604,17 @@ function appName(app: AppKind): string {
     ssh: "ssh",
     dns: "dns",
     web: "web",
+    dhcp: "dhcp",
+    chrony: "chrony",
+    cups: "cups",
+    mdns: "mdns",
+    llmnr: "llmnr",
+    gsconnect: "gsconnect",
+    wsdd: "wsdd",
+    engram: "engram",
+    opendesign: "open-design",
+    passim: "passim",
+    system: "system",
     program: "program",
     unknown: "unknown"
   };
@@ -627,6 +653,17 @@ function appBadge(app: AppKind): string {
     ssh: "[SSH]",
     dns: "[DNS]",
     web: "[WEB]",
+    dhcp: "[DHCP]",
+    chrony: "[NTP]",
+    cups: "[CUPS]",
+    mdns: "[MDNS]",
+    llmnr: "[LLMNR]",
+    gsconnect: "[GSCON]",
+    wsdd: "[WSDD]",
+    engram: "[ENGRM]",
+    opendesign: "[OD]",
+    passim: "[PASS]",
+    system: "[SYS]",
     program: "[PROC]",
     unknown: "[?]"
   };
@@ -657,10 +694,21 @@ function riskColor(risk: RiskLevel): RGBA {
   return theme.green;
 }
 
-function bar(count: number, total: number): string {
+function barParts(count: number, total: number): { filled: string; empty: string } {
   const width = 12;
   const filled = total > 0 ? Math.max(1, Math.round((count / total) * width)) : 0;
-  return `${"█".repeat(filled)}${"░".repeat(width - filled)}`;
+  return {
+    filled: "█".repeat(filled),
+    empty: "░".repeat(width - filled)
+  };
+}
+
+function appColor(app: string): RGBA {
+  if (["postgres", "redis", "mysql", "mongodb", "elasticsearch", "rabbitmq", "memcached"].includes(app)) return theme.red;
+  if (["podman", "docker", "apache", "nginx", "caddy", "traefik", "haproxy", "envoy", "dns", "dhcp", "chrony", "cups", "mdns", "llmnr", "passim", "system"].includes(app)) return theme.yellow;
+  if (["nextjs", "nestjs", "vite", "node", "bun", "deno", "opendesign"].includes(app)) return theme.green;
+  if (["mcp", "gsconnect", "wsdd", "engram", "python", "php", "java", "ruby"].includes(app)) return theme.blue;
+  return theme.dim;
 }
 
 function formatContainerPort(port: NonNullable<PortEntry["container"]>["ports"][number]): string {

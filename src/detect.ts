@@ -35,6 +35,10 @@ const COMMAND_PATTERNS: Array<[RegExp, AppKind, number, string]> = [
     "command podman"
   ],
   [/@modelcontextprotocol\/server-[^\s]+|\bmcp-server[\w.-]*\b|\b[\w.-]*-mcp(?:@|\s|$)|(^|\s)mcp(\s|$)/, "mcp", 0.9, "command mcp"],
+  [/gsconnect@andyholmes\.github\.io|(^|\s|\/)gsconnect(\s|$)/, "gsconnect", 0.94, "command gsconnect"],
+  [/(^|\s|\/)wsdd(\s|$)|\/usr\/bin\/wsdd\b/, "wsdd", 0.94, "command wsdd"],
+  [/(^|\s|\/)engram(\s|$)/, "engram", 0.94, "command engram"],
+  [/--od-stamp-app=|\/open-design\/|(^|\s)open-design(\s|$)/, "opendesign", 0.9, "command open-design"],
   [/(^|\s|\/)(php-fpm|php)(\s|$)/, "php", 0.82, "command php"],
   [/(^|\s|\/)(python[0-9.]?|gunicorn|uvicorn)(\s|$)/, "python", 0.78, "command python"],
   [/(^|\s|\/)(java|jsvc)(\s|$)|\b(org\.apache\.catalina|tomcat|jetty|springframework)\b/, "java", 0.75, "command java"],
@@ -46,7 +50,7 @@ const COMMAND_PATTERNS: Array<[RegExp, AppKind, number, string]> = [
   [/(^|\s|\/)node(\s|$)/, "node", 0.7, "command node"]
 ];
 
-export async function detectApp(entry: Pick<PortEntry, "cmdline" | "cwd" | "exe" | "name" | "port" | "protocol">): Promise<AppDetection> {
+export async function detectApp(entry: Pick<PortEntry, "cmdline" | "cwd" | "exe" | "name" | "port" | "protocol" | "uid">): Promise<AppDetection> {
   const candidates: Candidate[] = [];
   const command = [entry.exe, entry.name, entry.cmdline].filter(Boolean).join(" ");
 
@@ -55,6 +59,7 @@ export async function detectApp(entry: Pick<PortEntry, "cmdline" | "cwd" | "exe"
   }
 
   candidates.push(...detectFromPort(entry.port, entry.protocol));
+  candidates.push(...detectFromUid(entry.uid));
 
   if (entry.cwd) {
     candidates.push(...(await detectFromCwd(entry.cwd)));
@@ -100,12 +105,19 @@ export function riskForDetection(detection: AppDetection): RiskLevel {
       "haproxy",
       "envoy",
       "ssh",
-      "dns"
+      "dns",
+      "dhcp",
+      "chrony",
+      "cups",
+      "mdns",
+      "llmnr",
+      "passim",
+      "system"
     ].includes(detection.app)
   ) {
     return "high";
   }
-  if (detection.app === "mcp") return "medium";
+  if (["mcp", "gsconnect", "wsdd"].includes(detection.app)) return "medium";
   if (["program", "unknown"].includes(detection.app)) return "medium";
   return "low";
 }
@@ -117,6 +129,7 @@ function detectFromPort(port: number, protocol: PortEntry["protocol"]): Candidat
 
   if (transport === "tcp") {
     if (port === 22) hint("ssh", 0.38, "port 22 ssh");
+    if (port === 631) hint("cups", 0.38, "port 631 cups");
     if (port === 80) hint("web", 0.38, "port 80 http");
     if (port === 443) hint("web", 0.38, "port 443 https");
     if ([8000, 8080, 8443, 8888].includes(port)) hint("web", 0.32, `port ${port} web`);
@@ -127,10 +140,20 @@ function detectFromPort(port: number, protocol: PortEntry["protocol"]): Candidat
     if (port === 9200) hint("elasticsearch", 0.35, "port 9200 elasticsearch");
     if (port === 5672) hint("rabbitmq", 0.35, "port 5672 rabbitmq");
     if (port === 11211) hint("memcached", 0.35, "port 11211 memcached");
+    if (port === 27500) hint("passim", 0.38, "port 27500 passim");
   }
 
   if (port === 53) hint("dns", 0.38, "port 53 dns");
+  if (port === 68 && transport === "udp") hint("dhcp", 0.38, "port 68 dhcp");
+  if (port === 323 && transport === "udp") hint("chrony", 0.38, "port 323 chrony");
+  if (port === 5353 && transport === "udp") hint("mdns", 0.38, "port 5353 mdns");
+  if (port === 5355) hint("llmnr", 0.38, "port 5355 llmnr");
   return candidates;
+}
+
+function detectFromUid(uid: number | undefined): Candidate[] {
+  if (uid === 0) return [{ app: "system", confidence: 0.24, evidence: "uid 0 system socket" }];
+  return [];
 }
 
 async function detectFromCwd(cwd: string): Promise<Candidate[]> {

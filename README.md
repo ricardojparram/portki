@@ -19,8 +19,8 @@ It is built for developer machines where ports are constantly occupied by Next.j
 
 - Dense lazygit-style TUI with listener list, inspector, summary chart, search, command mode, and centered confirmations.
 - Fast Linux scanner based on `/proc/net/*` plus `/proc/<pid>/fd` inode mapping.
-- App detection for Next.js, NestJS, Vite, Node, Bun, Deno, Docker, Podman, MCP servers, Apache, Nginx, Caddy, Lighttpd, Traefik, HAProxy, Envoy, Postgres, Redis, MySQL, MongoDB, Elasticsearch, RabbitMQ, Memcached, SSH, DNS, Python, PHP, Java, Ruby, and generic programs.
-- Low-confidence hints for unresolved sockets on well-known ports such as 22, 53, 80, 443, 5432, 6379, 3306, 27017, 9200, 5672, and 11211.
+- App detection for Next.js, NestJS, Vite, Node, Bun, Deno, Docker, Podman, MCP servers, Apache, Nginx, Caddy, Lighttpd, Traefik, HAProxy, Envoy, Postgres, Redis, MySQL, MongoDB, Elasticsearch, RabbitMQ, Memcached, SSH, DNS, DHCP, Chrony/NTP, CUPS, mDNS, LLMNR, Passim, GSConnect, WSDD, Engram, Open Design sidecars, Python, PHP, Java, Ruby, system sockets, and generic programs.
+- Low-confidence hints for unresolved sockets on well-known ports such as 22, 53, 68, 80, 323, 443, 631, 5353, 5355, 5432, 6379, 3306, 27017, 9200, 5672, 11211, and 27500.
 - Optional Docker/Podman metadata enrichment: when available, published ports are matched back to container name and image.
 - Safe kill flow: `SIGTERM` first, short wait, second confirmation before `SIGKILL`.
 - Group selection with `<space>` and grouped kill confirmation.
@@ -104,7 +104,7 @@ Kill confirmations accept `y` or `Enter`. `Esc` cancels modals and line input.
 - Uses Linux `/proc` as the primary source for sockets and process metadata.
 - Treats `ss`, `lsof`, `fuser`, Docker, and Podman as optional diagnostics/enrichment, not runtime requirements.
 - Blocks unresolved PIDs, PID 1, and the running `portki` process.
-- Marks infrastructure listeners such as web servers, databases, SSH, DNS, Docker, and Podman as high risk.
+- Marks infrastructure listeners such as web servers, databases, SSH, DNS, DHCP, mDNS, LLMNR, CUPS, Passim, Docker, and Podman as high risk.
 - Never sends `SIGKILL` first.
 - Requires a second confirmation before force killing remaining processes.
 - Shows partial data when `/proc` permissions prevent reading process details.

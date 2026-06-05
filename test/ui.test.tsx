@@ -163,7 +163,8 @@ describe("PortUi", () => {
     expect(frame).toContain("Kill listener?");
     expect(frame).toContain("SIGTERM");
     expect(frame).toContain("3000");
-    expect(frame).toContain("y/Enter confirm");
+    expect(frame).toContain("Confirm: y/Enter | Cancel: n/Esc");
+    expect(frame).not.toContain("y/Enter confirm");
 
     act(() => setup.renderer.destroy());
   });
@@ -209,6 +210,19 @@ describe("PortUi", () => {
     expect(frame).toContain("█");
     expect(frame).toContain("░");
     expect(frame).not.toContain("nextjs     #");
+
+    act(() => setup.renderer.destroy());
+  });
+
+  test("renders app summary bars with app colors", async () => {
+    const setup = await testRender(<PortUi initialEntries={entries} />, { width: 100, height: 28 });
+
+    await setup.waitForFrame((frame: string) => frame.includes("postgres"));
+    const spans = setup.captureSpans().lines.flatMap((line) => line.spans);
+    const barSpan = spans.find((span) => span.text.includes("█"));
+
+    expect(colorBuffer(barSpan?.fg)).toBeDefined();
+    expect(colorBuffer(barSpan?.fg)).not.toEqual(DEFAULT_FOREGROUND);
 
     act(() => setup.renderer.destroy());
   });

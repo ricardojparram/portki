@@ -65,12 +65,31 @@ describe("detectApp", () => {
     const http = await detectApp(entry({ port: 80 }));
     const https = await detectApp(entry({ port: 443 }));
     const dns = await detectApp(entry({ port: 53 }));
+    const dhcp = await detectApp(entry({ protocol: "udp", port: 68 }));
+    const chrony = await detectApp(entry({ protocol: "udp", port: 323 }));
+    const cups = await detectApp(entry({ port: 631 }));
+    const mdns = await detectApp(entry({ protocol: "udp", port: 5353 }));
+    const llmnr = await detectApp(entry({ port: 5355 }));
+    const system = await detectApp(entry({ protocol: "udp", port: 40315, uid: 0 }));
 
     expect(http.app).toBe("web");
     expect(http.evidence).toContain("port 80 http");
     expect(http.confidence).toBeLessThan(0.5);
     expect(https.app).toBe("web");
     expect(dns.app).toBe("dns");
+    expect(dhcp.app).toBe("dhcp");
+    expect(chrony.app).toBe("chrony");
+    expect(cups.app).toBe("cups");
+    expect(mdns.app).toBe("mdns");
+    expect(llmnr.app).toBe("llmnr");
+    expect(system.app).toBe("system");
+  });
+
+  test("detects common desktop and developer helper listeners", async () => {
+    expect((await detectApp(entry({ port: 1716, exe: "/usr/bin/gjs-console", name: "gjs", cmdline: "gjs -m /home/ricardo/.local/share/gnome-shell/extensions/gsconnect@andyholmes.github.io/service/daemon.js" }))).app).toBe("gsconnect");
+    expect((await detectApp(entry({ port: 3702, exe: "/usr/bin/python3.13", name: "wsdd", cmdline: "/usr/bin/python3 /usr/bin/wsdd --no-host --discovery" }))).app).toBe("wsdd");
+    expect((await detectApp(entry({ port: 7437, exe: "/home/linuxbrew/.linuxbrew/bin/engram", name: "engram", cmdline: "engram serve" }))).app).toBe("engram");
+    expect((await detectApp(entry({ port: 33141, exe: "/home/ricardo/.nvm/versions/node/v24.15.0/bin/node", name: "MainThread", cmdline: "node apps/daemon/src/sidecar/index.ts --od-stamp-app=daemon --od-stamp-source=tools-dev" }))).app).toBe("opendesign");
   });
 
   test("detects Docker listener helpers beyond docker-proxy", async () => {
