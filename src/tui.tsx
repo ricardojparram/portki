@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createCliRenderer, type KeyEvent } from "@opentui/core";
+import { createCliRenderer, RGBA, TextAttributes, type KeyEvent } from "@opentui/core";
 import { createRoot, useRenderer, useTerminalDimensions } from "@opentui/react";
 import { executeKillPlan, planKillEntries } from "./kill-policy";
 import { scanPorts } from "./procfs";
@@ -26,21 +26,13 @@ interface PortUiProps {
 }
 
 const theme = {
-  bg: "#1e1e2e",
-  panel: "#1e1e2e",
-  panelAlt: "#181825",
-  border: "#cdd6f4",
-  borderHot: "#a6e3a1",
-  text: "#cdd6f4",
-  dim: "#bac2de",
-  green: "#a6e3a1",
-  teal: "#94e2d5",
-  blue: "#89b4fa",
-  yellow: "#f9e2af",
-  orange: "#fab387",
-  red: "#f38ba8",
-  selectedBg: "#89b4fa",
-  selectedText: "#1e1e2e"
+  border: RGBA.defaultForeground(),
+  borderHot: RGBA.fromIndex(6),
+  dim: RGBA.fromIndex(8),
+  green: RGBA.fromIndex(2),
+  blue: RGBA.fromIndex(4),
+  yellow: RGBA.fromIndex(3),
+  red: RGBA.fromIndex(1)
 };
 
 const cardBorderStyle = "rounded";
@@ -119,7 +111,7 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
   }, [renderer]);
 
   return (
-    <box width="100%" height="100%" flexDirection="column" backgroundColor={theme.bg}>
+    <box width="100%" height="100%" flexDirection="column">
       <Header total={state.entries.length} filtered={filtered.length} filter={effectiveFilter} status={state.status} />
 
       <box flexGrow={1} flexDirection="row" paddingLeft={1} paddingRight={1} gap={1}>
@@ -130,7 +122,6 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
           border
           borderStyle={cardBorderStyle}
           borderColor={theme.border}
-          backgroundColor={theme.panel}
           flexGrow={1}
           flexDirection="column"
           paddingLeft={1}
@@ -154,7 +145,6 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
             border
             borderStyle={cardBorderStyle}
             borderColor={theme.border}
-            backgroundColor={theme.panel}
             flexGrow={1}
             flexDirection="column"
             paddingLeft={1}
@@ -167,7 +157,6 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
             border
             borderStyle={cardBorderStyle}
             borderColor={theme.border}
-            backgroundColor={theme.panel}
             height={summaryHeight}
             flexDirection="column"
             paddingLeft={1}
@@ -193,12 +182,11 @@ function Header({ total, filtered, filter, status }: { total: number; filtered: 
         border
         borderStyle={cardBorderStyle}
         borderColor={theme.border}
-        backgroundColor={theme.panel}
         flexDirection="column"
         paddingLeft={1}
       >
         <text height={1} fg={theme.green} content="PORTKI" />
-        <text height={1} fg={theme.text} content="local port inspector" />
+        <text height={1} content="local port inspector" />
         <text height={1} fg={theme.dim} content={`showing ${filtered}/${total}  |  filter ${filter || "off"}  |  ${status}`} />
       </box>
     </box>
@@ -209,7 +197,7 @@ function Footer({ state }: { state: TuiState }) {
   const selectedText = state.selectedKeys.length > 0 ? ` | Selected ${state.selectedKeys.length}` : "";
   const modeText = modeLine(state) === "normal" ? "" : `  ${modeLine(state)}`;
   return (
-    <box height={1} paddingLeft={1} paddingRight={1} backgroundColor={theme.bg}>
+    <box height={1} paddingLeft={1} paddingRight={1}>
       <text height={1} fg={theme.dim}>
         <span fg={theme.blue}>Move:</span> <span fg={theme.yellow}>j/k</span>
         <span fg={theme.dim}> | </span>
@@ -231,8 +219,9 @@ function Footer({ state }: { state: TuiState }) {
 }
 
 function ListenerRow({ entry, focused, marked }: { entry: PortEntry; focused: boolean; marked: boolean }) {
-  const fg = marked || focused ? theme.selectedText : riskColor(entry.risk);
-  const bg = focused ? theme.selectedBg : marked ? theme.green : undefined;
+  const attributes =
+    (marked ? TextAttributes.BOLD | TextAttributes.UNDERLINE : TextAttributes.NONE) |
+    (focused ? TextAttributes.INVERSE : TextAttributes.NONE);
   const content = [
     riskBadge(entry.risk).padEnd(5),
     appBadge(entry.app).padEnd(8),
@@ -241,8 +230,7 @@ function ListenerRow({ entry, focused, marked }: { entry: PortEntry; focused: bo
     commandLabel(entry).slice(0, 34)
   ].join(" ");
 
-  if (bg) return <text height={1} wrapMode="none" truncate fg={fg} bg={bg} content={content} />;
-  return <text height={1} wrapMode="none" truncate fg={fg} content={content} />;
+  return <text height={1} wrapMode="none" truncate fg={riskColor(entry.risk)} attributes={attributes} content={content} />;
 }
 
 function Inspector({ entry }: { entry: PortEntry | undefined }) {
@@ -260,10 +248,10 @@ function Inspector({ entry }: { entry: PortEntry | undefined }) {
       <text height={1} fg={theme.green} content={`App ${appName(entry.app)}`} />
       <text height={1} fg={riskColor(entry.risk)} content={`Risk ${riskSymbol(entry.risk)} ${riskLabel(entry.risk)}`} />
       <text height={1} fg={theme.yellow} content={`Port ${entry.port}  PID ${entry.pid ?? "-"}`} />
-      <text height={1} fg={theme.text} content={`Endpoint ${entry.protocol.toUpperCase()} ${entry.address}:${entry.port}`} />
+      <text height={1} content={`Endpoint ${entry.protocol.toUpperCase()} ${entry.address}:${entry.port}`} />
       <text height={1} fg={theme.dim} content={`Inode ${entry.inode}  Detection ${Math.round(entry.detection.confidence * 100)}%`} />
       <text height={1} fg={theme.blue} content="Process" />
-      <text height={1} fg={theme.text} content={`Command ${entry.cmdline ?? entry.exe ?? "-"}`} />
+      <text height={1} content={`Command ${entry.cmdline ?? entry.exe ?? "-"}`} />
       <text height={1} fg={theme.dim} content={`CWD ${entry.cwd ?? "-"}`} />
       <text height={1} fg={theme.dim} content={`Evidence ${entry.detection.evidence.join(", ") || "no detection evidence"}`} />
     </>
@@ -276,7 +264,7 @@ function AppSummary({ appCounts, total }: { appCounts: Array<[string, number]>; 
       <text height={1} fg={theme.blue} content="Apps in current list" />
       <text height={1} fg={theme.dim} content={`${total} visible listeners`} />
       {appCounts.slice(0, 6).map(([app, count]) => (
-        <text key={app} height={1} fg={theme.text} content={`${app.padEnd(9)} ${bar(count, total)} ${count}`} />
+        <text key={app} height={1} content={`${app.padEnd(9)} ${bar(count, total)} ${count}`} />
       ))}
     </>
   );
@@ -292,7 +280,7 @@ function Overlay({ state, filteredCount }: { state: TuiState; filteredCount: num
   if (state.mode === "search") {
     return (
       <CenterModal title="Search" height={5}>
-        <text height={1} fg={theme.text} content={`/${state.command}`} />
+        <text height={1} content={`/${state.command}`} />
         <text height={1} fg={theme.dim} content={`${filteredCount} matches. Enter applies, Esc cancels.`} />
       </CenterModal>
     );
@@ -300,7 +288,7 @@ function Overlay({ state, filteredCount }: { state: TuiState; filteredCount: num
   if (state.mode === "command") {
     return (
       <CenterModal title="Command" height={5}>
-        <text height={1} fg={theme.text} content={`:${state.command}`} />
+        <text height={1} content={`:${state.command}`} />
         <text height={1} fg={theme.dim} content="kill 3000  |  kill-pid 1234  |  filter next  |  refresh  |  quit" />
       </CenterModal>
     );
@@ -308,8 +296,8 @@ function Overlay({ state, filteredCount }: { state: TuiState; filteredCount: num
   if (state.mode === "help") {
     return (
       <CenterModal title="Help" height={9}>
-        <text fg={theme.text}>j/k move   gg/G top/bottom   / live search   d kill selected</text>
-        <text fg={theme.text}>: command line   r refresh   q quit</text>
+        <text>j/k move   gg/G top/bottom   / live search   d kill selected</text>
+        <text>: command line   r refresh   q quit</text>
         <text fg={theme.dim}>Kill policy: SIGTERM first. SIGKILL needs a second confirmation.</text>
         <text fg={theme.dim}>High-risk services are highlighted before any signal is sent.</text>
       </CenterModal>
@@ -326,7 +314,7 @@ function ConfirmModal({ entries, force }: { entries: PortEntry[]; force: boolean
   return (
     <CenterModal title={title} height={8} hot>
       <text fg={force ? theme.red : theme.yellow}>{`${signal} ${entries.length} selected listener${entries.length === 1 ? "" : "s"}`}</text>
-      <text fg={theme.text}>{entries.length === 1 && primary ? `${primary.protocol.toUpperCase()} ${primary.address}:${primary.port}  pid ${primary.pid ?? "-"}` : `ports ${ports}`}</text>
+      <text>{entries.length === 1 && primary ? `${primary.protocol.toUpperCase()} ${primary.address}:${primary.port}  pid ${primary.pid ?? "-"}` : `ports ${ports}`}</text>
       <text fg={theme.dim}>{entries.length === 1 && primary ? commandLabel(primary).slice(0, 92) : `${entries.length} processes will receive ${signal}`}</text>
       <text fg={theme.dim}>y/Enter confirm   n/Esc cancel</text>
       {entries.some((entry) => entry.risk === "high") ? <text fg={theme.red}>High-risk target. Double-check before confirming.</text> : null}
@@ -345,8 +333,7 @@ function CenterModal({ title, height, hot, children }: { title: string; height: 
       zIndex={20}
       border
       borderStyle={cardBorderStyle}
-      borderColor={theme.borderHot}
-      backgroundColor={theme.panel}
+      borderColor={hot ? theme.borderHot : theme.border}
       title={title}
       flexDirection="column"
       paddingLeft={1}
@@ -578,7 +565,7 @@ function riskLabel(risk: RiskLevel): string {
   return "Low";
 }
 
-function riskColor(risk: RiskLevel): string {
+function riskColor(risk: RiskLevel): RGBA {
   if (risk === "high") return theme.red;
   if (risk === "medium") return theme.yellow;
   return theme.green;

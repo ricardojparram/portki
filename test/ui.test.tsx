@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { TextAttributes } from "@opentui/core";
 import { testRender } from "@opentui/react/test-utils";
 import { act } from "react";
 import { PortUi } from "../src/tui";
@@ -47,6 +48,14 @@ const podmanEntry: PortEntry = {
   detection: { app: "podman", confidence: 0.96, evidence: ["command podman"] },
   risk: "high"
 };
+
+const CATPPUCCIN_BASE = [30, 30, 46, 255];
+const CATPPUCCIN_MANTLE = [24, 24, 37, 255];
+const CATPPUCCIN_TEXT = [205, 214, 244, 255];
+
+function colorBuffer(spanColor: { buffer?: Uint16Array } | undefined): number[] | undefined {
+  return spanColor?.buffer ? Array.from(spanColor.buffer) : undefined;
+}
 
 describe("PortUi", () => {
   test("renders table/inspector panes and opens vim command line", async () => {
@@ -195,7 +204,7 @@ describe("PortUi", () => {
     act(() => setup.renderer.destroy());
   });
 
-  test("keeps focus styling visible when the focused row is selected", async () => {
+  test("keeps focus styling visible when the focused row is selected without Catppuccin RGB assumptions", async () => {
     const setup = await testRender(<PortUi initialEntries={entries} />, { width: 100, height: 28 });
 
     await setup.waitForFrame((frame: string) => frame.includes("3000"));
@@ -208,13 +217,17 @@ describe("PortUi", () => {
     const nextRow = frame.lines.flatMap((line) => line.spans).find((span) => span.text.includes("[NEXT]"));
     const postgresRow = frame.lines.flatMap((line) => line.spans).find((span) => span.text.includes("[PG]"));
 
-    expect(nextRow?.bg.buffer).toEqual(new Uint16Array([166, 227, 161, 255]));
-    expect(postgresRow?.bg.buffer).toEqual(new Uint16Array([137, 180, 250, 255]));
+    expect(nextRow ? nextRow.attributes & TextAttributes.UNDERLINE : 0).toBe(TextAttributes.UNDERLINE);
+    expect(nextRow ? nextRow.attributes & TextAttributes.INVERSE : 0).toBe(0);
+    expect(postgresRow ? postgresRow.attributes & TextAttributes.UNDERLINE : 0).toBe(TextAttributes.UNDERLINE);
+    expect(postgresRow ? postgresRow.attributes & TextAttributes.INVERSE : 0).toBe(TextAttributes.INVERSE);
+    expect(colorBuffer(nextRow?.bg)).not.toEqual(CATPPUCCIN_BASE);
+    expect(colorBuffer(postgresRow?.bg)).not.toEqual(CATPPUCCIN_BASE);
 
     act(() => setup.renderer.destroy());
   });
 
-  test("renders listeners border with the neutral card color", async () => {
+  test("renders listeners border without hardcoded Catppuccin text color", async () => {
     const setup = await testRender(<PortUi initialEntries={entries} />, { width: 100, height: 28 });
 
     await setup.waitForFrame((frame: string) => frame.includes("3000"));
@@ -223,7 +236,20 @@ describe("PortUi", () => {
       .flatMap((line) => line.spans)
       .find((span) => span.text.includes("Listeners"));
 
-    expect(listenersBorder?.fg.buffer).toEqual(new Uint16Array([205, 214, 244, 255]));
+    expect(colorBuffer(listenersBorder?.fg)).not.toEqual(CATPPUCCIN_TEXT);
+
+    act(() => setup.renderer.destroy());
+  });
+
+  test("does not paint the base UI with Catppuccin backgrounds", async () => {
+    const setup = await testRender(<PortUi initialEntries={entries} />, { width: 100, height: 28 });
+
+    await setup.waitForFrame((frame: string) => frame.includes("3000"));
+    const frame = setup.captureSpans();
+    const backgrounds = frame.lines.flatMap((line) => line.spans).map((span) => colorBuffer(span.bg)).filter(Boolean);
+
+    expect(backgrounds).not.toContainEqual(CATPPUCCIN_BASE);
+    expect(backgrounds).not.toContainEqual(CATPPUCCIN_MANTLE);
 
     act(() => setup.renderer.destroy());
   });
