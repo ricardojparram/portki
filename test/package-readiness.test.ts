@@ -38,7 +38,7 @@ describe("npm package readiness", () => {
   test("keeps the npm tarball intentionally small", async () => {
     const packageJson = await readPackageJson();
 
-    expect(packageJson.files).toEqual(["bin", "dist", "README.md", "LICENSE"]);
+    expect(packageJson.files).toEqual(["assets", "bin", "dist", "README.md", "LICENSE"]);
   });
 
   test("pins dependency versions instead of publishing latest ranges", async () => {

@@ -1,13 +1,11 @@
-# PORTKI
-
-```text
+<pre>
 ██████╗  ██████╗ ██████╗ ████████╗██╗  ██╗██╗
 ██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝██║ ██╔╝██║
 ██████╔╝██║   ██║██████╔╝   ██║   █████╔╝ ██║
 ██╔═══╝ ██║   ██║██╔══██╗   ██║   ██╔═██╗ ██║
 ██║     ╚██████╔╝██║  ██║   ██║   ██║  ██╗██║
 ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝
-```
+</pre>
 
 `portki` is a Bun-powered Linux TUI for inspecting local port listeners and stopping them with a conservative kill policy.
 
@@ -15,21 +13,7 @@ It is built for developer machines where ports are constantly occupied by Next.j
 
 ## Preview
 
-```text
-╭──────────────────────────────────────────────────────────────────────── PORTKI ─╮
-│ local port inspector                                                           │
-│ showing 6/6  |  filter off  |  6 sockets                                       │
-╰────────────────────────────────────────────────────────────────────────────────╯
-╭─ Listeners ──────────────────────────────────────────────── 1 of 6 ─╮╭─ Inspector ───────────────╮
-│ RISK  APP      PORT   PID     COMMAND                               ││ App nextjs                  │
-│ OK    [NEXT]   3000  675399  next-server (v16.2.4)                  ││ Risk OK Low                 │
-│ OK    [NEST]   3100  675558  node --enable-source-maps              ││ Port 3000  PID 675399       │
-│ !!    [POD]    8080  419322  podman system service --time=0         ││ Endpoint TCP 127.0.0.1:3000 │
-│ !!    [PG]     5432  2222    postgres -D /data                      ││ Detection 95%               │
-│ !     [MCP]    6274  713004  mcp-server-filesystem                  ││ Evidence command next       │
-╰──────────────────────────────────────────────────────────────────────╯╰────────────────────────────╯
-Move: j/k | Select: <space> | Find: / | Command: : | Kill: d | Refresh: r | Quit: q
-```
+![PORTKI TUI preview](assets/preview.png)
 
 ## Features
 
