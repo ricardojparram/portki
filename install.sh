@@ -24,6 +24,13 @@ if ! command -v npm >/dev/null 2>&1; then
   exit 127
 fi
 
+if ! command -v bun >/dev/null 2>&1; then
+  printf '%s\n' "portki's TUI currently requires Bun because OpenTUI uses Bun FFI."
+  printf '%s\n' "Install Bun from https://bun.sh, then run this installer again."
+  printf '%s\n' "Standalone binary releases are planned so this requirement can go away."
+  exit 127
+fi
+
 printf '%s\n' "Installing portki..."
 npm install -g portki
 

@@ -70,7 +70,8 @@ describe("npm package readiness", () => {
     expect(installScript).toContain("npm install -g portki");
     expect(installScript).toContain("command -v node");
     expect(installScript).toContain("command -v npm");
+    expect(installScript).toContain("command -v bun");
     expect(installScript).not.toContain("sudo");
-    expect(installScript).not.toContain("bun.sh");
+    expect(installScript).toContain("https://bun.sh");
   });
 });

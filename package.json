@@ -1,7 +1,7 @@
 {
   "name": "portki",
   "version": "0.1.0",
-  "description": "A Node-powered TUI for inspecting and safely stopping local port listeners.",
+  "description": "A Linux TUI for inspecting and safely stopping local port listeners.",
   "type": "module",
   "license": "MIT",
   "author": "Ricardo <ricardojparram@users.noreply.github.com>",

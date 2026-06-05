@@ -7,7 +7,7 @@
 ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝
 </pre>
 
-`portki` is a Node-powered Linux TUI for inspecting local port listeners and stopping them with a conservative kill policy.
+`portki` is a Linux TUI for inspecting local port listeners and stopping them with a conservative kill policy.
 
 It is built for developer machines where ports are constantly occupied by Next.js, NestJS, Vite, Docker, Podman, MCP servers, databases, and background tools. The scanner reads Linux `/proc` directly, so normal usage does not depend on `lsof`, `ss`, or `fuser`.
 
@@ -39,8 +39,8 @@ npm install -g portki
 Requirements:
 
 - Linux with `/proc` mounted.
-- Node.js `>=20.0.0`.
-- npm.
+- Node.js `>=20.0.0` and npm for installation and non-TUI commands.
+- Bun for the interactive TUI, because OpenTUI currently uses Bun FFI.
 - A terminal with truecolor support recommended.
 
 ## Usage
@@ -50,6 +50,8 @@ Open the TUI:
 ```sh
 portki
 ```
+
+The TUI path currently runs through Bun. Scriptable commands such as `portki list --json` and `portki kill ... --safe` run through Node.
 
 List listeners as JSON:
 
@@ -94,7 +96,7 @@ Kill confirmations accept `y` or `Enter`. `Esc` cancels modals and line input.
 
 ## Development
 
-Runtime is Node-first. Development still uses Bun for tests and bundling.
+Runtime is hybrid for now: Node handles scriptable commands, while the interactive TUI uses Bun for OpenTUI FFI. Development also uses Bun for tests and bundling.
 
 ```sh
 git clone https://github.com/ricardojparram/portki.git
