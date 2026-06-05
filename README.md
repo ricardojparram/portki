@@ -1,8 +1,44 @@
 # PORTKI
 
+```text
+██████╗  ██████╗ ██████╗ ████████╗██╗  ██╗██╗
+██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝██║ ██╔╝██║
+██████╔╝██║   ██║██████╔╝   ██║   █████╔╝ ██║
+██╔═══╝ ██║   ██║██╔══██╗   ██║   ██╔═██╗ ██║
+██║     ╚██████╔╝██║  ██║   ██║   ██║  ██╗██║
+╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝
+```
+
 `portki` is a Bun-powered Linux TUI for inspecting local port listeners and stopping them with a conservative kill policy.
 
-It reads `/proc` as the primary source, so normal usage does not require `lsof`, `ss`, or `fuser`.
+It is built for developer machines where ports are constantly occupied by Next.js, NestJS, Vite, Docker, Podman, MCP servers, databases, and background tools. The scanner reads Linux `/proc` directly, so normal usage does not depend on `lsof`, `ss`, or `fuser`.
+
+## Preview
+
+```text
+╭──────────────────────────────────────────────────────────────────────── PORTKI ─╮
+│ local port inspector                                                           │
+│ showing 6/6  |  filter off  |  6 sockets                                       │
+╰────────────────────────────────────────────────────────────────────────────────╯
+╭─ Listeners ──────────────────────────────────────────────── 1 of 6 ─╮╭─ Inspector ───────────────╮
+│ RISK  APP      PORT   PID     COMMAND                               ││ App nextjs                  │
+│ OK    [NEXT]   3000  675399  next-server (v16.2.4)                  ││ Risk OK Low                 │
+│ OK    [NEST]   3100  675558  node --enable-source-maps              ││ Port 3000  PID 675399       │
+│ !!    [POD]    8080  419322  podman system service --time=0         ││ Endpoint TCP 127.0.0.1:3000 │
+│ !!    [PG]     5432  2222    postgres -D /data                      ││ Detection 95%               │
+│ !     [MCP]    6274  713004  mcp-server-filesystem                  ││ Evidence command next       │
+╰──────────────────────────────────────────────────────────────────────╯╰────────────────────────────╯
+Move: j/k | Select: <space> | Find: / | Command: : | Kill: d | Refresh: r | Quit: q
+```
+
+## Features
+
+- Dense lazygit-style TUI with listener list, inspector, summary chart, search, command mode, and centered confirmations.
+- Fast Linux scanner based on `/proc/net/*` plus `/proc/<pid>/fd` inode mapping.
+- App detection for Next.js, NestJS, Vite, Node, Bun, Deno, Docker, Podman, MCP servers, Postgres, Redis, MySQL, and generic programs.
+- Safe kill flow: `SIGTERM` first, short wait, second confirmation before `SIGKILL`.
+- Group selection with `<space>` and grouped kill confirmation.
+- Parseable CLI output for scripting with `portki list --json`.
 
 ## Install
 
@@ -10,31 +46,41 @@ It reads `/proc` as the primary source, so normal usage does not require `lsof`,
 npm install -g portki
 ```
 
-`portki` requires Bun at runtime:
+`portki` is distributed through npm, but it requires Bun at runtime because OpenTUI is Bun-first:
 
 ```sh
 curl -fsSL https://bun.sh/install | bash
 ```
 
-For local development from this repo:
+Requirements:
+
+- Linux with `/proc` mounted.
+- Bun `>=1.1.0`.
+- A terminal with truecolor support recommended.
+
+## Usage
+
+Open the TUI:
 
 ```sh
-bun install
-bun run build
-npm install -g .
 portki
 ```
 
-## Commands
+List listeners as JSON:
 
 ```sh
-portki
 portki list --json
-portki kill <port|pid> --safe
-portki kill <port|pid> --safe --force
 ```
 
-## TUI controls
+Kill by port or PID using the same safe policy as the TUI:
+
+```sh
+portki kill 3000 --safe
+portki kill 675399 --safe
+portki kill 3000 --safe --force
+```
+
+## Controls
 
 ```text
 Move: j/k | Select: <space> | Find: / | Command: : | Kill: d | Refresh: r | Quit: q
@@ -50,40 +96,88 @@ Command mode supports:
 :quit
 ```
 
-Kill confirmations accept `y` or `Enter`. `SIGTERM` is always attempted before `SIGKILL`; force kill requires a second confirmation.
+Kill confirmations accept `y` or `Enter`. `Esc` cancels modals and line input.
 
-## Safety model
+## Safety Model
 
 - Blocks unresolved PIDs, PID 1, and the running `portki` process.
 - Marks infrastructure listeners such as Postgres, Redis, MySQL, Docker, and Podman as high risk.
+- Never sends `SIGKILL` first.
+- Requires a second confirmation before force killing remaining processes.
 - Shows partial data when `/proc` permissions prevent reading process details.
 - Never asks for sudo.
 
 ## Development
 
 ```sh
+git clone https://github.com/ricardojparram/portki.git
+cd portki
+bun install
 bun test
 bun run check
 bun run build
-bun run pack:dry-run
 ```
 
-Before publishing:
+Run locally:
+
+```sh
+bun run build
+./bin/portki
+```
+
+Install locally as a global command:
+
+```sh
+npm install -g .
+portki
+```
+
+Release check:
+
+```sh
+bun run release:check
+```
+
+That command runs typecheck, tests, build, and `npm pack --dry-run`.
+
+## Contributing
+
+Contributions are welcome.
+
+Good first areas:
+
+- App detection patterns for more frameworks, tools, and container helpers.
+- Linux distro edge cases in `/proc` parsing.
+- TUI layout improvements for small terminals.
+- Tests for scanner fixtures, kill policy, and keyboard flows.
+- Documentation and screenshots.
+
+Before opening a PR:
+
+```sh
+bun install
+bun run release:check
+```
+
+Please keep the kill policy conservative. Changes that send signals, infer risk, or expand process detection should include focused tests.
+
+## Publishing
+
+Publishing is manual for now:
 
 ```sh
 bun run release:check
 npm publish
 ```
 
-## GitHub setup
+The npm tarball is intentionally small and includes only:
 
-Recommended first push:
+- `bin/`
+- `dist/`
+- `README.md`
+- `LICENSE`
+- `package.json`
 
-```sh
-git add .
-git commit -m "feat: prepare portki"
-git remote add origin https://github.com/ricardojparram/portki.git
-git push -u origin main
-```
+## License
 
-The CI workflow runs typecheck, tests, build, and npm package dry-run on every push and pull request.
+MIT
