@@ -26,7 +26,7 @@ describe("npm package readiness", () => {
   test("publishes the portki command and release metadata", async () => {
     const packageJson = await readPackageJson();
 
-    expect(packageJson.name).toBe("@ricardojparram/portki");
+    expect(packageJson.name).toBe("portki-tui");
     expect(packageJson.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(packageJson.license).toBe("MIT");
     expect(packageJson.bin).toEqual({ portki: "bin/portki" });

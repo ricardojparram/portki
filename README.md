@@ -39,7 +39,7 @@ The install script installs Bun automatically if it is not already available, cl
 After `portki` is published to npm, manual npm install will also be available:
 
 ```sh
-npm install -g portki
+npm install -g portki-tui
 ```
 
 For manual npm installs, install Bun first if you want to use the interactive TUI.
