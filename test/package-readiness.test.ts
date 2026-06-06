@@ -26,10 +26,10 @@ describe("npm package readiness", () => {
   test("publishes the portki command and release metadata", async () => {
     const packageJson = await readPackageJson();
 
-    expect(packageJson.name).toBe("portki");
+    expect(packageJson.name).toBe("@ricardojparram/portki");
     expect(packageJson.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(packageJson.license).toBe("MIT");
-    expect(packageJson.bin).toEqual({ portki: "./bin/portki" });
+    expect(packageJson.bin).toEqual({ portki: "bin/portki" });
     expect(packageJson.repository?.url).toContain("github.com/ricardojparram/portki");
     expect(packageJson.bugs?.url).toContain("github.com/ricardojparram/portki/issues");
     expect(packageJson.homepage).toContain("github.com/ricardojparram/portki");
@@ -72,7 +72,7 @@ describe("npm package readiness", () => {
     expect(installScript).toContain("bun install --frozen-lockfile");
     expect(installScript).toContain("bun run build");
     expect(installScript).toContain("npm pack");
-    expect(installScript).toContain("npm install -g portki-*.tgz");
+    expect(installScript).toContain("npm install -g *.tgz");
     expect(installScript).toContain("command -v node");
     expect(installScript).toContain("command -v npm");
     expect(installScript).toContain("command -v git");

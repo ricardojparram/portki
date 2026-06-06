@@ -1,5 +1,5 @@
 {
-  "name": "portki",
+  "name": "@ricardojparram/portki",
   "version": "0.1.0",
   "description": "A Linux TUI for inspecting and safely stopping local port listeners.",
   "type": "module",
@@ -24,7 +24,7 @@
     "developer-tools"
   ],
   "bin": {
-    "portki": "./bin/portki"
+    "portki": "bin/portki"
   },
   "scripts": {
     "test": "bun test",

@@ -67,7 +67,7 @@ cd "$PORTKI_DIR"
 bun install --frozen-lockfile
 bun run build
 npm pack
-npm install -g portki-*.tgz
+npm install -g *.tgz
 
 if ! command -v portki >/dev/null 2>&1; then
   printf '%s\n' "portki installed, but it was not found on PATH."
