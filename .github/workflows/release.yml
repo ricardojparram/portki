@@ -36,6 +36,14 @@ jobs:
       - name: Build Standalone Binary
         run: bun build ./src/index.tsx --compile --outfile dist/${{ matrix.target }}
 
+      - name: Install UPX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y upx-ucl
+
+      - name: Compress Binary with UPX
+        run: upx --best dist/${{ matrix.target }}
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
