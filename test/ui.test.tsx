@@ -372,4 +372,33 @@ describe("PortUi", () => {
 
     act(() => setup.renderer.destroy());
   });
+
+  test("renders portki reserved port entry correctly", async () => {
+    const portkiEntry: PortEntry = {
+      protocol: "tcp",
+      address: "127.0.0.1",
+      port: 8888,
+      state: "LISTEN",
+      inode: "synthetic",
+      pid: 1234,
+      user: "user",
+      app: "portki",
+      name: "portki (reservado)",
+      cmdline: "Puerto reservado/monopolizado por portki",
+      risk: "low",
+      detection: {
+        app: "portki",
+        confidence: 1,
+        evidence: ["Monopolizado por portki"]
+      }
+    };
+
+    const setup = await testRender(<PortUi initialEntries={[portkiEntry]} />, { width: 100, height: 28 });
+    await setup.waitForFrame((frame: string) => frame.includes("portki"));
+    const frame = setup.captureCharFrame();
+    expect(frame).toContain("[PORTK]");
+    expect(frame).toContain("portki (reservado)");
+    act(() => setup.renderer.destroy());
+  });
 });
+

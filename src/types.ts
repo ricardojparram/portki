@@ -43,6 +43,7 @@ export type AppKind =
   | "passim"
   | "system"
   | "program"
+  | "portki"
   | "unknown";
 
 export type RiskLevel = "low" | "medium" | "high";

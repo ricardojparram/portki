@@ -4,6 +4,8 @@ import { createRoot, useRenderer, useTerminalDimensions } from "@opentui/react";
 import { executeKillPlan, planKillEntries } from "./kill-policy";
 import { scanPorts } from "./procfs";
 import type { AppKind, PortEntry, RiskLevel } from "./types";
+import { fetchProcessLogs } from "./logs";
+import { privationManager } from "./privation";
 
 type Mode = "normal" | "search" | "command" | "confirm" | "force-confirm" | "help";
 
@@ -17,6 +19,7 @@ interface TuiState {
   selectedKeys: string[];
   pendingKillEntries: PortEntry[];
   quitRequested: boolean;
+  inspectorTab: "details" | "logs";
 }
 
 interface PortUiProps {
@@ -65,7 +68,8 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
     status: initialEntries ? `${initialEntries.length} sockets` : "Scanning /proc...",
     selectedKeys: [],
     pendingKillEntries: [],
-    quitRequested: false
+    quitRequested: false,
+    inspectorTab: "details"
   });
 
   const effectiveFilter = state.mode === "search" ? state.command : state.filter;
@@ -78,15 +82,60 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
   const rows = visibleRows(filtered, selectedIndex, rowCount);
   const appCounts = useMemo(() => summarizeApps(filtered), [filtered]);
 
-  async function refresh() {
+  async function refresh(customStatus?: string) {
     try {
-      const entries = await scanner();
+      const rawEntries = await scanner();
+      const privatedPorts = privationManager.getPrivatedPorts();
+      
+      const entries = rawEntries.map((entry) => {
+        if (privatedPorts.includes(entry.port)) {
+          return {
+            ...entry,
+            app: "portki" as AppKind,
+            name: "portki (reservado)",
+            cmdline: "Puerto reservado/monopolizado por portki",
+            risk: "low" as const,
+            detection: {
+              app: "portki" as AppKind,
+              confidence: 1,
+              evidence: ["Monopolizado por portki"]
+            }
+          };
+        }
+        return entry;
+      });
+
+      for (const port of privatedPorts) {
+        if (!entries.some((e) => e.port === port)) {
+          entries.push({
+            protocol: "tcp",
+            address: "127.0.0.1",
+            port,
+            state: "LISTEN",
+            inode: "synthetic",
+            pid: process.pid,
+            user: process.env.USER || "current_user",
+            app: "portki",
+            name: "portki (reservado)",
+            cmdline: "Puerto reservado/monopolizado por portki",
+            risk: "low",
+            detection: {
+              app: "portki",
+              confidence: 1,
+              evidence: ["Monopolizado por portki"]
+            }
+          });
+        }
+      }
+
+      entries.sort((left, right) => left.port - right.port || (left.pid ?? 0) - (right.pid ?? 0));
+
       setState((current) => ({
         ...current,
         entries,
         selected: Math.min(current.selected, Math.max(entries.length - 1, 0)),
         selectedKeys: current.selectedKeys.filter((key) => entries.some((entry) => socketKey(entry) === key)),
-        status: `${entries.length} sockets`
+        status: customStatus ?? `${entries.length} sockets`
       }));
     } catch (error) {
       setState((current) => ({
@@ -102,7 +151,11 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
   }, [initialEntries]);
 
   useEffect(() => {
-    if (state.quitRequested) renderer.destroy();
+    if (state.quitRequested) {
+      void privationManager.liberarTodos().then(() => {
+        renderer.destroy();
+      });
+    }
   }, [renderer, state.quitRequested]);
 
   useEffect(() => {
@@ -146,7 +199,7 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
 
         <box width="38%" flexDirection="column" gap={0}>
           <box
-            title="Inspector"
+            title={state.inspectorTab === "details" ? "Inspector [Detalles]" : "Inspector [Logs]"}
             border
             borderStyle={cardBorderStyle}
             borderColor={theme.border}
@@ -155,7 +208,7 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
             paddingLeft={1}
             paddingRight={1}
           >
-            <Inspector entry={selectedEntry} />
+            <Inspector entry={selectedEntry} activeTab={state.inspectorTab} />
           </box>
           <box
             title="Summary"
@@ -239,12 +292,64 @@ function ListenerRow({ entry, focused, marked }: { entry: PortEntry; focused: bo
   return <text height={1} wrapMode="none" truncate fg={fg} attributes={attributes} content={content} />;
 }
 
-function Inspector({ entry }: { entry: PortEntry | undefined }) {
+function Inspector({
+  entry,
+  activeTab
+}: {
+  entry: PortEntry | undefined;
+  activeTab: "details" | "logs";
+}) {
+  const [logs, setLogs] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!entry || activeTab !== "logs") {
+      setLogs("");
+      return;
+    }
+
+    let active = true;
+    setLoading(true);
+    setLogs("Obteniendo logs...");
+
+    fetchProcessLogs(entry.pid ?? 0, entry.container)
+      .then((res) => {
+        if (active) {
+          const clean = res.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, "").trim();
+          setLogs(clean || "[El proceso no ha generado líneas de log o están vacías]");
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setLogs(`[Error al cargar logs: ${err.message}]`);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [entry?.pid, entry?.container?.id, activeTab]);
+
   if (!entry) {
     return (
       <>
         <text fg={theme.dim}>No listener selected</text>
         <text fg={theme.dim}>Use / to filter by app, port, pid, cwd, or command.</text>
+      </>
+    );
+  }
+
+  if (activeTab === "logs") {
+    const lines = logs.split("\n");
+    return (
+      <>
+        {lines.map((line, idx) => (
+          <text key={idx} height={1} wrapMode="none" truncate fg={theme.dim}>
+            {line}
+          </text>
+        ))}
       </>
     );
   }
@@ -349,9 +454,10 @@ function Overlay({ state, filteredCount }: { state: TuiState; filteredCount: num
   }
   if (state.mode === "help") {
     return (
-      <CenterModal title="Help" height={9}>
+      <CenterModal title="Help" height={11}>
         <text>j/k move   gg/G top/bottom   / live search   d kill selected</text>
-        <text>: command line   r refresh   q quit</text>
+        <text>p toggle private port   Tab toggle details/logs</text>
+        <text>: command line (:p [port] / :release [port])   r refresh   q quit</text>
         <text fg={theme.dim}>Kill policy: SIGTERM first. SIGKILL needs a second confirmation.</text>
         <text fg={theme.dim}>High-risk services are highlighted before any signal is sent.</text>
       </CenterModal>
@@ -414,7 +520,7 @@ function handleKey(
   state: TuiState,
   key: KeyEvent,
   renderer: Awaited<ReturnType<typeof createCliRenderer>>,
-  refresh: () => Promise<void>
+  refresh: (customStatus?: string) => Promise<void>
 ): TuiState {
   if (state.mode === "search" || state.mode === "command") {
     if (isEscape(key)) return { ...state, mode: "normal", command: "" };
@@ -451,6 +557,49 @@ function handleKey(
   if (key.name === "?" || key.sequence === "?") return { ...state, mode: state.mode === "help" ? "normal" : "help" };
   if (key.name === "/" || key.sequence === "/") return { ...state, mode: "search", command: "", selected: 0 };
   if (key.name === ":" || key.sequence === ":") return { ...state, mode: "command", command: "" };
+  if (key.name === "tab") {
+    return {
+      ...state,
+      inspectorTab: state.inspectorTab === "details" ? "logs" : "details"
+    };
+  }
+  if (key.name === "h" || key.sequence === "h" || key.name === "left") {
+    return {
+      ...state,
+      inspectorTab: "details"
+    };
+  }
+  if (key.name === "l" || key.sequence === "l" || key.name === "right") {
+    return {
+      ...state,
+      inspectorTab: "logs"
+    };
+  }
+  if (key.name === "p" || key.sequence === "p") {
+    const target = filterEntries(state.entries, state.filter)[state.selected];
+    if (target) {
+      const port = target.port;
+      if (privationManager.isPrivated(port)) {
+        void privationManager.liberarPort(port).then((success) => {
+          if (success) {
+            void refresh(`Puerto ${port} liberado`);
+          } else {
+            void refresh(`Error al liberar puerto ${port}`);
+          }
+        });
+        return { ...state, status: `Liberando puerto ${port}...` };
+      } else {
+        void privationManager.privarPort(port).then((success) => {
+          if (success) {
+            void refresh(`Puerto ${port} reservado con éxito`);
+          } else {
+            void refresh(`Error: El puerto ${port} ya está en uso o requiere privilegios`);
+          }
+        });
+        return { ...state, status: `Reservando puerto ${port}...` };
+      }
+    }
+  }
   if (isSpace(key)) {
     const target = filterEntries(state.entries, state.filter)[state.selected];
     if (!target) return state;
@@ -483,7 +632,7 @@ function handleKey(
 function applyLineInput(
   state: TuiState,
   _renderer: Awaited<ReturnType<typeof createCliRenderer>>,
-  refresh: () => Promise<void>
+  refresh: (customStatus?: string) => Promise<void>
 ): TuiState {
   if (state.mode === "search") {
     return { ...state, mode: "normal", filter: state.command.trim(), selected: 0, command: "" };
@@ -511,6 +660,34 @@ function applyLineInput(
     return pendingKillEntries.length > 0
       ? { ...state, mode: "confirm", pendingKillEntries, command: "" }
       : { ...state, mode: "normal", command: "", status: `No socket for PID ${pid}` };
+  }
+  if (command.startsWith("private ") || command.startsWith("p ")) {
+    const portStr = command.startsWith("private ") ? command.slice("private ".length) : command.slice("p ".length);
+    const port = Number.parseInt(portStr, 10);
+    if (!Number.isNaN(port)) {
+      void privationManager.privarPort(port).then((success) => {
+        if (success) {
+          void refresh(`Puerto ${port} reservado con éxito`);
+        } else {
+          void refresh(`Error: El puerto ${port} ya está en uso o requiere privilegios`);
+        }
+      });
+      return { ...state, mode: "normal", command: "", status: `Reservando puerto ${port}...` };
+    }
+  }
+  if (command.startsWith("release ") || command.startsWith("r ")) {
+    const portStr = command.startsWith("release ") ? command.slice("release ".length) : command.slice("r ".length);
+    const port = Number.parseInt(portStr, 10);
+    if (!Number.isNaN(port)) {
+      void privationManager.liberarPort(port).then((success) => {
+        if (success) {
+          void refresh(`Puerto ${port} liberado`);
+        } else {
+          void refresh(`Error: El puerto ${port} no estaba reservado`);
+        }
+      });
+      return { ...state, mode: "normal", command: "", status: `Liberando puerto ${port}...` };
+    }
   }
 
   return { ...state, mode: "normal", command: "", status: `Unknown command: ${command}` };
@@ -613,9 +790,9 @@ function appName(app: AppKind): string {
     wsdd: "wsdd",
     engram: "engram",
     opendesign: "open-design",
-    passim: "passim",
     system: "system",
     program: "program",
+    portki: "portki",
     unknown: "unknown"
   };
   return labels[app];
@@ -662,9 +839,9 @@ function appBadge(app: AppKind): string {
     wsdd: "[WSDD]",
     engram: "[ENGRM]",
     opendesign: "[OD]",
-    passim: "[PASS]",
     system: "[SYS]",
     program: "[PROC]",
+    portki: "[PORTK]",
     unknown: "[?]"
   };
   return labels[app];
@@ -706,7 +883,7 @@ function barParts(count: number, total: number): { filled: string; empty: string
 function appColor(app: string): RGBA {
   if (["postgres", "redis", "mysql", "mongodb", "elasticsearch", "rabbitmq", "memcached"].includes(app)) return theme.red;
   if (["podman", "docker", "apache", "nginx", "caddy", "traefik", "haproxy", "envoy", "dns", "dhcp", "chrony", "cups", "mdns", "llmnr", "passim", "system"].includes(app)) return theme.yellow;
-  if (["nextjs", "nestjs", "vite", "node", "bun", "deno", "opendesign"].includes(app)) return theme.green;
+  if (["nextjs", "nestjs", "vite", "node", "bun", "deno", "opendesign", "portki"].includes(app)) return theme.green;
   if (["mcp", "gsconnect", "wsdd", "engram", "python", "php", "java", "ruby"].includes(app)) return theme.blue;
   return theme.dim;
 }
