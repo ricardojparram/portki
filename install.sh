@@ -66,7 +66,8 @@ git clone --depth 1 --branch "$PORTKI_REF" "$PORTKI_REPO" "$PORTKI_DIR"
 cd "$PORTKI_DIR"
 bun install --frozen-lockfile
 bun run build
-npm install -g "$PORTKI_DIR"
+npm pack
+npm install -g portki-*.tgz
 
 if ! command -v portki >/dev/null 2>&1; then
   printf '%s\n' "portki installed, but it was not found on PATH."
