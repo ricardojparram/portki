@@ -30,6 +30,7 @@
     "test": "bun test",
     "check": "tsc --noEmit",
     "build": "bun build ./src/index.tsx --outdir ./dist --target node --format esm --external @opentui/core-darwin-x64 --external @opentui/core-darwin-arm64 --external @opentui/core-linux-arm64-musl --external @opentui/core-linux-arm64 --external @opentui/core-win32-x64 --external @opentui/core-win32-arm64 --external @opentui/core-linux-x64 --external @opentui/core-linux-x64-musl",
+    "build:compile": "bun build ./src/index.tsx --compile --outfile dist/portki",
     "pack:dry-run": "npm --cache /tmp/portki-npm-cache pack --dry-run --json",
     "release:check": "bun run check && bun test && bun run build && npm --cache /tmp/portki-npm-cache pack --dry-run --json",
     "prepack": "bun run build"

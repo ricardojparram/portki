@@ -1,79 +1,84 @@
 #!/usr/bin/env sh
 set -eu
 
-PORTKI_REPO="${PORTKI_REPO:-https://github.com/ricardojparram/portki.git}"
-PORTKI_REF="${PORTKI_REF:-main}"
-
 if [ "$(uname -s)" != "Linux" ]; then
   printf '%s\n' "portki currently supports Linux only."
   exit 1
 fi
 
-if ! command -v node >/dev/null 2>&1; then
-  printf '%s\n' "portki requires Node.js 20 or newer."
-  printf '%s\n' "Install Node.js, then run this installer again."
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64|amd64)
+    ASSET_NAME="portki-linux-x64"
+    ;;
+  aarch64|arm64)
+    ASSET_NAME="portki-linux-arm64"
+    ;;
+  *)
+    printf '%s\n' "Unsupported architecture: $ARCH. portki currently supports x86_64 and arm64."
+    exit 1
+    ;;
+esac
+
+if command -v curl >/dev/null 2>&1; then
+  DOWNLOAD_CMD="curl -fsSL"
+elif command -v wget >/dev/null 2>&1; then
+  DOWNLOAD_CMD="wget -qO-"
+else
+  printf '%s\n' "portki requires curl or wget to download the binary."
   exit 127
 fi
 
-NODE_MAJOR=$(node -e "process.stdout.write(String(process.versions.node.split('.')[0]))")
-if [ "$NODE_MAJOR" -lt 20 ]; then
-  printf '%s\n' "portki requires Node.js 20 or newer. Current: $(node -v)"
-  exit 1
+PORTKI_REPO_OWNER="ricardojparram"
+PORTKI_REPO_NAME="portki"
+PORTKI_VERSION="${PORTKI_VERSION:-latest}"
+
+if [ "$PORTKI_VERSION" = "latest" ]; then
+  DOWNLOAD_URL="https://github.com/${PORTKI_REPO_OWNER}/${PORTKI_REPO_NAME}/releases/latest/download/${ASSET_NAME}"
+else
+  DOWNLOAD_URL="https://github.com/${PORTKI_REPO_OWNER}/${PORTKI_REPO_NAME}/releases/download/${PORTKI_VERSION}/${ASSET_NAME}"
 fi
 
-if ! command -v npm >/dev/null 2>&1; then
-  printf '%s\n' "portki installs through npm, but npm was not found."
-  printf '%s\n' "Install npm, then run this installer again."
-  exit 127
+# Detect installation directory
+if [ -w "/usr/local/bin" ]; then
+  BIN_DIR="/usr/local/bin"
+  USE_SUDO="false"
+elif [ -d "$HOME/.local/bin" ] && [ -w "$HOME/.local/bin" ] && printf '%s\n' "$PATH" | grep -q "$HOME/.local/bin"; then
+  BIN_DIR="$HOME/.local/bin"
+  USE_SUDO="false"
+else
+  BIN_DIR="/usr/local/bin"
+  USE_SUDO="true"
 fi
 
-if ! command -v git >/dev/null 2>&1; then
-  printf '%s\n' "portki installs from GitHub for now, but git was not found."
-  printf '%s\n' "Install git, then run this installer again."
-  exit 127
+TEMP_FILE=$(mktemp)
+trap 'rm -f "$TEMP_FILE"' EXIT HUP INT TERM
+
+printf '%s\n' "Downloading portki standalone binary from GitHub..."
+if command -v curl >/dev/null 2>&1; then
+  curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_FILE"
+elif command -v wget >/dev/null 2>&1; then
+  wget -qO "$TEMP_FILE" "$DOWNLOAD_URL"
 fi
 
-if ! command -v bun >/dev/null 2>&1; then
-  if ! command -v curl >/dev/null 2>&1; then
-    printf '%s\n' "portki's TUI currently requires Bun, but curl was not found."
-    printf '%s\n' "Install curl or install Bun from https://bun.sh, then run this installer again."
-    exit 127
-  fi
+chmod +x "$TEMP_FILE"
 
-  printf '%s\n' "Bun was not found. Installing Bun..."
-  curl -fsSL https://bun.sh/install | sh
-
-  BUN_BIN="${BUN_INSTALL:-$HOME/.bun}/bin"
-  if [ -d "$BUN_BIN" ]; then
-    PATH="$BUN_BIN:$PATH"
-    export PATH
-  fi
-
-  if ! command -v bun >/dev/null 2>&1; then
-    printf '%s\n' "Bun was installed, but it was not found on PATH for this shell."
-    printf '%s\n' "Add $BUN_BIN to PATH, then run portki."
+printf '%s\n' "Installing portki to $BIN_DIR/portki..."
+if [ "$USE_SUDO" = "true" ]; then
+  if ! command -v sudo >/dev/null 2>&1; then
+    printf '%s\n' "Error: sudo is required to install to /usr/local/bin, but was not found."
     exit 1
   fi
+  sudo cp "$TEMP_FILE" "$BIN_DIR/portki"
+else
+  cp "$TEMP_FILE" "$BIN_DIR/portki"
 fi
-
-WORKDIR=$(mktemp -d)
-PORTKI_DIR="$WORKDIR/portki"
-trap 'rm -rf "$WORKDIR"' EXIT HUP INT TERM
-
-printf '%s\n' "Installing portki from GitHub..."
-git clone --depth 1 --branch "$PORTKI_REF" "$PORTKI_REPO" "$PORTKI_DIR"
-
-cd "$PORTKI_DIR"
-bun install --frozen-lockfile
-bun run build
-npm pack
-npm install -g *.tgz
 
 if ! command -v portki >/dev/null 2>&1; then
   printf '%s\n' "portki installed, but it was not found on PATH."
-  printf '%s\n' "Check your npm global bin directory: npm bin -g"
+  printf '%s\n' "Make sure $BIN_DIR is in your PATH."
   exit 1
 fi
 
-printf '%s\n' "portki installed."
+printf '%s\n' "portki successfully installed!"
 printf '%s\n' "Run: portki"

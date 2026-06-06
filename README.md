@@ -28,28 +28,28 @@ It is built for developer machines where ports are constantly occupied by Next.j
 
 ## Install
 
-Install from the GitHub source:
+Install the standalone precompiled binary:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ricardojparram/portki/main/install.sh | sh
 ```
 
-The install script installs Bun automatically if it is not already available, clones this repository, builds `portki`, and installs it globally from the local checkout.
+The install script detects your processor architecture (x86_64 vs arm64), downloads the precompiled standalone binary from the latest GitHub Release, and places it in your path.
 
-After `portki` is published to npm, manual npm install will also be available:
+Alternatively, you can install the NPM package:
 
 ```sh
 npm install -g portki-tui
 ```
 
-For manual npm installs, install Bun first if you want to use the interactive TUI.
+For manual npm installs, you must install Bun on your system first if you want to use the interactive TUI.
 
 Requirements:
 
 - Linux with `/proc` mounted.
-- Node.js `>=20.0.0` and npm for installation and non-TUI commands.
-- Bun for the interactive TUI, because OpenTUI currently uses Bun FFI. The curl installer installs it for you.
 - A terminal with truecolor support recommended.
+- **Standalone installation**: Zero runtime dependencies (no Node.js or Bun required).
+- **NPM installation**: Node.js `>=20.0.0`, npm, and Bun.
 
 ## Usage
 
