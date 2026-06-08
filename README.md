@@ -24,7 +24,7 @@
 
 ## Preview
 
-![PORTKI TUI preview](assets/preview.png)
+![PORTKI TUI preview](assets/preview.gif)
 
 ---
 
@@ -152,6 +152,11 @@ Run your local build:
 ```sh
 bun run build
 ./bin/portki
+```
+
+Generate TUI preview animation (requires [VHS](https://github.com/charmbracelet/vhs)):
+```sh
+vhs demo.tape
 ```
 
 ---

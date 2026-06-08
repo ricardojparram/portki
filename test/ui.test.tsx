@@ -205,7 +205,7 @@ describe("PortUi", () => {
     const frame = setup.captureCharFrame();
     expect(frame).toContain("Inspector");
     expect(frame).toContain("Summary");
-    expect(frame).toContain("Apps in current list");
+    expect(frame).toContain("Listeners:");
     expect(frame).toContain("nextjs");
     expect(frame).toContain("█");
     expect(frame).toContain("░");

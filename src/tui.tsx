@@ -56,6 +56,8 @@ export async function runTui(): Promise<void> {
   root.render(<PortUi renderer={renderer} />);
 }
 
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
 export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initialEntries }: PortUiProps) {
   const contextRenderer = useRenderer();
   const terminal = useTerminalDimensions();
@@ -73,17 +75,30 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
     inspectorTab: "details"
   });
 
+  const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [spinnerFrame, setSpinnerFrame] = useState<number>(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSpinnerFrame((f) => (f + 1) % SPINNER_FRAMES.length);
+    }, 80);
+    return () => clearInterval(timer);
+  }, []);
+
   const effectiveFilter = state.mode === "search" ? state.command : state.filter;
   const filtered = useMemo(() => filterEntries(state.entries, effectiveFilter), [state.entries, effectiveFilter]);
   const selectedIndex = Math.min(state.selected, Math.max(filtered.length - 1, 0));
   const selectedEntry = filtered[selectedIndex];
   const selectedPosition = filtered.length > 0 ? selectedIndex + 1 : 0;
-  const rowCount = Math.max(6, terminal.height - 11);
-  const summaryHeight = Math.max(7, Math.floor((terminal.height - 7) * 0.35));
+  const showLogo = terminal.height >= 35;
+  const headerHeight = showLogo ? 8 : 5;
+  const rowCount = Math.max(3, terminal.height - 6 - headerHeight);
+  const summaryHeight = Math.max(7, Math.floor((terminal.height - headerHeight - 2) * 0.35));
   const rows = visibleRows(filtered, selectedIndex, rowCount);
   const appCounts = useMemo(() => summarizeApps(filtered), [filtered]);
 
   async function refresh(customStatus?: string) {
+    setIsScanning(true);
     try {
       const rawEntries = await scanner();
       const privatedPorts = privationManager.getPrivatedPorts();
@@ -143,6 +158,8 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
         ...current,
         status: error instanceof Error ? error.message : String(error)
       }));
+    } finally {
+      setIsScanning(false);
     }
   }
 
@@ -171,11 +188,20 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
 
   return (
     <box width="100%" height="100%" flexDirection="column">
-      <Header total={state.entries.length} filtered={filtered.length} filter={effectiveFilter} status={state.status} />
+      <Header
+        total={state.entries.length}
+        filtered={filtered.length}
+        filter={effectiveFilter}
+        status={state.status}
+        isScanning={isScanning}
+        spinnerChar={SPINNER_FRAMES[spinnerFrame]}
+        showLogo={showLogo}
+        headerHeight={headerHeight}
+      />
 
       <box flexGrow={1} flexDirection="row" gap={1}>
         <box
-          title="Listeners"
+          title={isScanning ? `Listeners ${SPINNER_FRAMES[spinnerFrame]}` : "Listeners"}
           bottomTitle={`${selectedPosition} of ${filtered.length}`}
           bottomTitleAlignment="right"
           border
@@ -215,7 +241,11 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
             paddingLeft={1}
             paddingRight={1}
           >
-            <Inspector entry={selectedEntry} activeTab={state.inspectorTab} />
+            <Inspector
+              entry={selectedEntry}
+              activeTab={state.inspectorTab}
+              spinnerChar={SPINNER_FRAMES[spinnerFrame]}
+            />
           </box>
           <box
             title="Summary"
@@ -227,7 +257,7 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
             paddingLeft={1}
             paddingRight={1}
           >
-            <AppSummary appCounts={appCounts} total={filtered.length} />
+            <AppSummary entries={state.entries} appCounts={appCounts} total={filtered.length} />
           </box>
         </box>
       </box>
@@ -239,9 +269,74 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
   );
 }
 
-function Header({ total, filtered, filter, status }: { total: number; filtered: number; filter: string; status: string }) {
+function Header({
+  total,
+  filtered,
+  filter,
+  status,
+  isScanning,
+  spinnerChar,
+  showLogo,
+  headerHeight
+}: {
+  total: number;
+  filtered: number;
+  filter: string;
+  status: string;
+  isScanning: boolean;
+  spinnerChar: string;
+  showLogo: boolean;
+  headerHeight: number;
+}) {
+  if (showLogo) {
+    const logo = [
+      "██████╗  ██████╗ ██████╗ ████████╗██╗  ██╗██╗",
+      "██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝██║ ██╔╝██║",
+      "██████╔╝██║   ██║██████╔╝   ██║   █████╔╝ ██║",
+      "██╔═══╝ ██║   ██║██╔══██╗   ██║   ██╔═██╗ ██║",
+      "██║     ╚██████╔╝██║  ██║   ██║   ██║  ██╗██║",
+      "╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝"
+    ];
+    const colors = [
+      RGBA.fromInts(0, 240, 255),
+      RGBA.fromInts(0, 200, 255),
+      RGBA.fromInts(0, 150, 255),
+      RGBA.fromInts(120, 100, 255),
+      RGBA.fromInts(200, 50, 255),
+      RGBA.fromInts(255, 0, 128)
+    ];
+
+    return (
+      <box height={headerHeight} flexDirection="row">
+        <box
+          flexGrow={1}
+          border
+          borderStyle={cardBorderStyle}
+          borderColor={theme.border}
+          flexDirection="row"
+          paddingLeft={1}
+          paddingRight={1}
+          gap={2}
+        >
+          <box flexDirection="column" width={46} height={6}>
+            {logo.map((line, idx) => (
+              <text key={idx} height={1} fg={colors[idx]} content={line} />
+            ))}
+          </box>
+          <box flexDirection="column" justifyContent="center">
+            <text height={1} attributes={TextAttributes.BOLD} fg={theme.blue} content="PORTKI" />
+            <text height={1} fg={theme.dim} content="local port inspector" />
+            <text height={1} content={`showing ${filtered}/${total}`} />
+            <text height={1} content={`filter: ${filter || "off"}`} />
+            <text height={1} fg={theme.yellow} content={`${isScanning ? `${spinnerChar} ` : ""}status: ${status}`} />
+          </box>
+        </box>
+      </box>
+    );
+  }
+
   return (
-    <box height={5} flexDirection="row">
+    <box height={headerHeight} flexDirection="row">
       <box
         flexGrow={1}
         border
@@ -252,7 +347,7 @@ function Header({ total, filtered, filter, status }: { total: number; filtered: 
       >
         <text height={1} fg={theme.green} content="PORTKI" />
         <text height={1} content="local port inspector" />
-        <text height={1} content={`showing ${filtered}/${total}  |  filter ${filter || "off"}  |  ${status}`} />
+        <text height={1} content={`${isScanning ? `${spinnerChar} ` : ""}showing ${filtered}/${total}  |  filter ${filter || "off"}  |  ${status}`} />
       </box>
     </box>
   );
@@ -301,10 +396,12 @@ function ListenerRow({ entry, focused, marked }: { entry: PortEntry; focused: bo
 
 function Inspector({
   entry,
-  activeTab
+  activeTab,
+  spinnerChar
 }: {
   entry: PortEntry | undefined;
   activeTab: "details" | "connections" | "logs";
+  spinnerChar: string;
 }) {
   const [logs, setLogs] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -380,7 +477,7 @@ function Inspector({
 
   if (activeTab === "connections") {
     if (loadingConn) {
-      return <text key="conn-loading" fg={theme.yellow} content="Obteniendo conexiones activas..." />;
+      return <text key="conn-loading" fg={theme.yellow} content={`${spinnerChar} Obteniendo conexiones activas...`} />;
     }
 
     if (connections.length === 0) {
@@ -406,6 +503,9 @@ function Inspector({
   }
 
   if (activeTab === "logs") {
+    if (loading) {
+      return <text key="logs-loading" fg={theme.yellow} content={`${spinnerChar} Obteniendo logs...`} />;
+    }
     const lines = logs.split("\n");
     return (
       <Fragment key="logs-list">
@@ -474,20 +574,45 @@ function Inspector({
   );
 }
 
-function AppSummary({ appCounts, total }: { appCounts: Array<[string, number]>; total: number }) {
+function AppSummary({
+  entries,
+  appCounts,
+  total
+}: {
+  entries: PortEntry[];
+  appCounts: Array<[string, number]>;
+  total: number;
+}) {
+  const low = entries.filter((e) => e.risk === "low").length;
+  const medium = entries.filter((e) => e.risk === "medium").length;
+  const high = entries.filter((e) => e.risk === "high").length;
+
+  const barWidth = 15;
+  let lowWidth = total > 0 ? Math.round((low / total) * barWidth) : 0;
+  let mediumWidth = total > 0 ? Math.round((medium / total) * barWidth) : 0;
+  let highWidth = total > 0 ? Math.max(0, barWidth - lowWidth - mediumWidth) : 0;
+  if (total > 0 && lowWidth + mediumWidth + highWidth !== barWidth) {
+    highWidth = Math.max(0, barWidth - lowWidth - mediumWidth);
+  }
+
   return (
-    <>
-      <text height={1} fg={theme.blue} content="Apps in current list" />
-      <text height={1} content={`${total} visible listeners`} />
-      {appCounts.slice(0, 6).map(([app, count]) => {
+    <Fragment key="summary-view">
+      <text key="summary-total" height={1}>
+        <span fg={theme.blue}>Listeners:</span> {total}
+      </text>
+      <text key="summary-risk" height={1}>
+        <span fg={theme.blue}>Risk:</span> [<span fg={theme.green}>{"█".repeat(lowWidth)}</span><span fg={theme.yellow}>{"█".repeat(mediumWidth)}</span><span fg={theme.red}>{"█".repeat(highWidth)}</span>] <span fg={theme.green}>L:{low}</span> <span fg={theme.yellow}>M:{medium}</span> <span fg={theme.red}>H:{high}</span>
+      </text>
+      <text key="summary-spacer" height={1} content="" />
+      {appCounts.slice(0, 4).map(([app, count]) => {
         const { filled, empty } = barParts(count, total);
         return (
-          <text key={app} height={1}>
+          <text key={`summary-app-${app}`} height={1}>
             {app.padEnd(9)} <span fg={appColor(app)}>{filled}</span><span fg={theme.dim}>{empty}</span> {count}
           </text>
         );
       })}
-    </>
+    </Fragment>
   );
 }
 
