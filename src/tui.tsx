@@ -90,10 +90,9 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
   const selectedIndex = Math.min(state.selected, Math.max(filtered.length - 1, 0));
   const selectedEntry = filtered[selectedIndex];
   const selectedPosition = filtered.length > 0 ? selectedIndex + 1 : 0;
-  const showLogo = terminal.height >= 35;
-  const headerHeight = showLogo ? 8 : 5;
-  const rowCount = Math.max(3, terminal.height - 6 - headerHeight);
-  const summaryHeight = Math.max(7, Math.floor((terminal.height - headerHeight - 2) * 0.35));
+  const headerHeight = 5;
+  const rowCount = Math.max(6, terminal.height - 11);
+  const summaryHeight = Math.max(7, Math.floor((terminal.height - 7) * 0.35));
   const rows = visibleRows(filtered, selectedIndex, rowCount);
   const appCounts = useMemo(() => summarizeApps(filtered), [filtered]);
 
@@ -195,7 +194,6 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
         status={state.status}
         isScanning={isScanning}
         spinnerChar={SPINNER_FRAMES[spinnerFrame]}
-        showLogo={showLogo}
         headerHeight={headerHeight}
       />
 
@@ -276,7 +274,6 @@ function Header({
   status,
   isScanning,
   spinnerChar,
-  showLogo,
   headerHeight
 }: {
   total: number;
@@ -285,56 +282,8 @@ function Header({
   status: string;
   isScanning: boolean;
   spinnerChar: string;
-  showLogo: boolean;
   headerHeight: number;
 }) {
-  if (showLogo) {
-    const logo = [
-      "██████╗  ██████╗ ██████╗ ████████╗██╗  ██╗██╗",
-      "██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝██║ ██╔╝██║",
-      "██████╔╝██║   ██║██████╔╝   ██║   █████╔╝ ██║",
-      "██╔═══╝ ██║   ██║██╔══██╗   ██║   ██╔═██╗ ██║",
-      "██║     ╚██████╔╝██║  ██║   ██║   ██║  ██╗██║",
-      "╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝"
-    ];
-    const colors = [
-      RGBA.fromInts(0, 240, 255),
-      RGBA.fromInts(0, 200, 255),
-      RGBA.fromInts(0, 150, 255),
-      RGBA.fromInts(120, 100, 255),
-      RGBA.fromInts(200, 50, 255),
-      RGBA.fromInts(255, 0, 128)
-    ];
-
-    return (
-      <box height={headerHeight} flexDirection="row">
-        <box
-          flexGrow={1}
-          border
-          borderStyle={cardBorderStyle}
-          borderColor={theme.border}
-          flexDirection="row"
-          paddingLeft={1}
-          paddingRight={1}
-          gap={2}
-        >
-          <box flexDirection="column" width={46} height={6}>
-            {logo.map((line, idx) => (
-              <text key={idx} height={1} fg={colors[idx]} content={line} />
-            ))}
-          </box>
-          <box flexDirection="column" justifyContent="center">
-            <text height={1} attributes={TextAttributes.BOLD} fg={theme.blue} content="PORTKI" />
-            <text height={1} fg={theme.dim} content="local port inspector" />
-            <text height={1} content={`showing ${filtered}/${total}`} />
-            <text height={1} content={`filter: ${filter || "off"}`} />
-            <text height={1} fg={theme.yellow} content={`${isScanning ? `${spinnerChar} ` : ""}status: ${status}`} />
-          </box>
-        </box>
-      </box>
-    );
-  }
-
   return (
     <box height={headerHeight} flexDirection="row">
       <box
@@ -345,8 +294,8 @@ function Header({
         flexDirection="column"
         paddingLeft={1}
       >
-        <text height={1} fg={theme.green} content="PORTKI" />
-        <text height={1} content="local port inspector" />
+        <text height={1} attributes={TextAttributes.BOLD} fg={theme.blue} content="PORTKI" />
+        <text height={1} fg={theme.dim} content="local port inspector" />
         <text height={1} content={`${isScanning ? `${spinnerChar} ` : ""}showing ${filtered}/${total}  |  filter ${filter || "off"}  |  ${status}`} />
       </box>
     </box>

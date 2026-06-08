@@ -1,11 +1,4 @@
-<pre align="center">
-██████╗  ██████╗ ██████╗ ████████╗██╗  ██╗██╗
-██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝██║ ██╔╝██║
-██████╔╝██║   ██║██████╔╝   ██║   █████╔╝ ██║
-██╔═══╝ ██║   ██║██╔══██╗   ██║   ██╔═██╗ ██║
-██║     ╚██████╔╝██║  ██║   ██║   ██║  ██╗██║
-╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝
-</pre>
+<h1 align="center">portki</h1>
 
 <p align="center">
   <strong>A Linux TUI for inspecting local port listeners and safely stopping them with a conservative kill policy.</strong>

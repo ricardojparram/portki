@@ -3,7 +3,7 @@
 
 Output assets/preview.gif
 
-Require portki
+Require bun
 
 Set Shell "bash"
 Set FontSize 16
@@ -11,10 +11,9 @@ Set Width 1200
 Set Height 600
 Set Theme "Catppuccin Mocha"
 Set Padding 20
-Set CornerRadius 10
 
 # Start Portki TUI
-Type "portki"
+Type "bun src/index.tsx"
 Enter
 Sleep 3s
 
