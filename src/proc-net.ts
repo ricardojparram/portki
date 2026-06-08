@@ -38,14 +38,14 @@ export function parseProcNet(content: string, protocol: Protocol): SocketRecord[
   return records;
 }
 
-function decodeIpv4(hex: string): string {
+export function decodeIpv4(hex: string): string {
   if (hex.length !== 8) return hex;
   const bytes = hex.match(/../g);
   if (!bytes) return hex;
   return bytes.reverse().map((byte) => Number.parseInt(byte, 16)).join(".");
 }
 
-function decodeIpv6(hex: string): string {
+export function decodeIpv6(hex: string): string {
   if (hex.length !== 32) return hex;
 
   const bytes = hex.match(/../g);

@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Fragment } from "react";
 import { createCliRenderer, RGBA, TextAttributes, type KeyEvent } from "@opentui/core";
 import { createRoot, useRenderer, useTerminalDimensions } from "@opentui/react";
 import { executeKillPlan, planKillEntries } from "./kill-policy";
 import { scanPorts } from "./procfs";
-import type { AppKind, PortEntry, RiskLevel } from "./types";
+import type { AppKind, PortEntry, RiskLevel, ActiveConnection } from "./types";
 import { fetchProcessLogs } from "./logs";
 import { privationManager } from "./privation";
+import { fetchActiveConnections } from "./connections";
 
 type Mode = "normal" | "search" | "command" | "confirm" | "force-confirm" | "help";
 
@@ -19,7 +20,7 @@ interface TuiState {
   selectedKeys: string[];
   pendingKillEntries: PortEntry[];
   quitRequested: boolean;
-  inspectorTab: "details" | "logs";
+  inspectorTab: "details" | "connections" | "logs";
 }
 
 interface PortUiProps {
@@ -199,7 +200,13 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
 
         <box width="38%" flexDirection="column" gap={0}>
           <box
-            title={state.inspectorTab === "details" ? "Inspector [Detalles]" : "Inspector [Logs]"}
+            title={
+              state.inspectorTab === "details"
+                ? "Inspector [Detalles]"
+                : state.inspectorTab === "connections"
+                ? "Inspector [Conexiones]"
+                : "Inspector [Logs]"
+            }
             border
             borderStyle={cardBorderStyle}
             borderColor={theme.border}
@@ -297,10 +304,12 @@ function Inspector({
   activeTab
 }: {
   entry: PortEntry | undefined;
-  activeTab: "details" | "logs";
+  activeTab: "details" | "connections" | "logs";
 }) {
   const [logs, setLogs] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
+  const [connections, setConnections] = useState<ActiveConnection[]>([]);
+  const [loadingConn, setLoadingConn] = useState<boolean>(false);
 
   useEffect(() => {
     if (!entry || activeTab !== "logs") {
@@ -332,83 +341,136 @@ function Inspector({
     };
   }, [entry?.pid, entry?.container?.id, activeTab]);
 
+  useEffect(() => {
+    if (!entry || activeTab !== "connections") {
+      setConnections([]);
+      return;
+    }
+
+    let active = true;
+    setLoadingConn(true);
+
+    fetchActiveConnections(entry.port)
+      .then((res) => {
+        if (active) {
+          setConnections(res);
+          setLoadingConn(false);
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setConnections([]);
+          setLoadingConn(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [entry?.port, activeTab]);
+
   if (!entry) {
     return (
-      <>
-        <text fg={theme.dim}>No listener selected</text>
-        <text fg={theme.dim}>Use / to filter by app, port, pid, cwd, or command.</text>
-      </>
+      <Fragment key="no-listener">
+        <text key="no-listener-selected" fg={theme.dim} content="No listener selected" />
+        <text key="no-listener-help" fg={theme.dim} content="Use / to filter by app, port, pid, cwd, or command." />
+      </Fragment>
+    );
+  }
+
+  if (activeTab === "connections") {
+    if (loadingConn) {
+      return <text key="conn-loading" fg={theme.yellow} content="Obteniendo conexiones activas..." />;
+    }
+
+    if (connections.length === 0) {
+      return <text key="conn-empty" fg={theme.dim} content="No hay conexiones activas en este puerto." />;
+    }
+
+    return (
+      <Fragment key="conn-list">
+        <text key="conn-header" height={1} attributes={TextAttributes.BOLD} content="PROTO  REMOTE ADDRESS          STATE" />
+        {connections.map((conn, idx) => {
+          const remoteStr = `${conn.remoteAddress}:${conn.remotePort}`;
+          const protoStr = conn.protocol.toUpperCase().padEnd(6);
+          const remStr = remoteStr.slice(0, 23).padEnd(23);
+          const stateStr = conn.state;
+          const content = `${protoStr} ${remStr} ${stateStr}`;
+          
+          return (
+            <text key={`conn-item-${idx}`} height={1} wrapMode="none" truncate fg={theme.dim} content={content || ""} />
+          );
+        })}
+      </Fragment>
     );
   }
 
   if (activeTab === "logs") {
     const lines = logs.split("\n");
     return (
-      <>
+      <Fragment key="logs-list">
         {lines.map((line, idx) => (
-          <text key={idx} height={1} wrapMode="none" truncate fg={theme.dim}>
-            {line}
-          </text>
+          <text key={`logs-item-${idx}`} height={1} wrapMode="none" truncate fg={theme.dim} content={line || ""} />
         ))}
-      </>
+      </Fragment>
     );
   }
 
   return (
-    <>
-      <text height={1}>
+    <Fragment key="details-view">
+      <text key="detail-app" height={1}>
         <span fg={theme.green}>App</span> {appName(entry.app)}
       </text>
-      <text height={1}>
+      <text key="detail-risk" height={1}>
         <span fg={riskColor(entry.risk)}>Risk {riskSymbol(entry.risk)}</span> {riskLabel(entry.risk)}
       </text>
-      <text height={1}>
+      <text key="detail-port-pid" height={1}>
         <span fg={theme.yellow}>Port</span> {entry.port}  <span fg={theme.yellow}>PID</span> {entry.pid ?? "-"}
       </text>
-      <text height={1}>
+      <text key="detail-endpoint" height={1}>
         <span fg={theme.blue}>Endpoint</span> {entry.protocol.toUpperCase()} {entry.address}:{entry.port}  <span fg={theme.blue}>State</span> {entry.state}
       </text>
-      <text height={1}>
+      <text key="detail-owner" height={1}>
         <span fg={theme.blue}>Owner</span> {entry.user ?? "-"}  <span fg={theme.blue}>UID</span> {entry.uid ?? "-"}
       </text>
-      <text height={1}>
+      <text key="detail-inode" height={1}>
         <span fg={theme.blue}>Inode</span> {entry.inode}  <span fg={theme.blue}>Detection</span> {Math.round(entry.detection.confidence * 100)}%
       </text>
-      <text height={1} fg={theme.blue} content="Process" />
-      <text height={1}>
+      <text key="detail-proc-title" height={1} fg={theme.blue} content="Process" />
+      <text key="detail-name" height={1}>
         <span fg={theme.yellow}>Name</span> {entry.name ?? "-"}
       </text>
-      <text height={1}>
+      <text key="detail-command" height={1}>
         <span fg={theme.yellow}>Command</span> {entry.cmdline ?? entry.exe ?? "-"}
       </text>
-      <text height={1}>
+      <text key="detail-binary" height={1}>
         <span fg={theme.blue}>Binary</span> {entry.exe ?? "-"}
       </text>
-      <text height={1}>
+      <text key="detail-cwd" height={1}>
         <span fg={theme.blue}>CWD</span> {entry.cwd ?? "-"}
       </text>
-      <text height={1}>
+      <text key="detail-evidence" height={1}>
         <span fg={theme.blue}>Evidence</span> {entry.detection.evidence.join(", ") || "no detection evidence"}
       </text>
       {entry.container ? (
-        <>
-          <text height={1} fg={theme.blue} content="Container" />
-          <text height={1}>
+        <Fragment key="detail-container-group">
+          <text key="detail-container-title" height={1} fg={theme.blue} content="Container" />
+          <text key="detail-container-image-row" height={1}>
             <span fg={theme.yellow}>Engine</span> {entry.container.engine}  <span fg={theme.yellow}>Name</span> {entry.container.name ?? "-"}
           </text>
-          <text height={1}>
+          <text key="detail-container-image" height={1}>
             <span fg={theme.blue}>Image</span> {shortImageName(entry.container.image)}
           </text>
-          <text height={1}>
+          <text key="detail-container-ports" height={1}>
             <span fg={theme.blue}>Ports</span> {entry.container.ports.map(formatContainerPort).join(", ") || "-"}
           </text>
-          <text height={1}>
+          <text key="detail-container-evidence" height={1}>
             <span fg={theme.blue}>Container evidence</span> {entry.container.evidence.join(", ")}
           </text>
-        </>
+        </Fragment>
       ) : null}
-      {entry.permissionDenied ? <text height={1} fg={theme.yellow} content="Permissions partial /proc data" /> : null}
-    </>
+      {entry.permissionDenied ? <text key="detail-permission-denied" height={1} fg={theme.yellow} content="Permissions partial /proc data" /> : null}
+    </Fragment>
   );
 }
 
@@ -456,7 +518,7 @@ function Overlay({ state, filteredCount }: { state: TuiState; filteredCount: num
     return (
       <CenterModal title="Help" height={11}>
         <text>j/k move   gg/G top/bottom   / live search   d kill selected</text>
-        <text>p toggle private port   Tab toggle details/logs</text>
+        <text>p toggle private port   Tab/h/l navigate tabs</text>
         <text>: command line (:p [port] / :release [port])   r refresh   q quit</text>
         <text fg={theme.dim}>Kill policy: SIGTERM first. SIGKILL needs a second confirmation.</text>
         <text fg={theme.dim}>High-risk services are highlighted before any signal is sent.</text>
@@ -558,21 +620,30 @@ function handleKey(
   if (key.name === "/" || key.sequence === "/") return { ...state, mode: "search", command: "", selected: 0 };
   if (key.name === ":" || key.sequence === ":") return { ...state, mode: "command", command: "" };
   if (key.name === "tab") {
+    const tabs: Array<"details" | "connections" | "logs"> = ["details", "connections", "logs"];
+    const currentIdx = tabs.indexOf(state.inspectorTab);
+    const nextIdx = (currentIdx + 1) % tabs.length;
     return {
       ...state,
-      inspectorTab: state.inspectorTab === "details" ? "logs" : "details"
+      inspectorTab: tabs[nextIdx] ?? "details"
     };
   }
   if (key.name === "h" || key.sequence === "h" || key.name === "left") {
+    const tabs: Array<"details" | "connections" | "logs"> = ["details", "connections", "logs"];
+    const currentIdx = tabs.indexOf(state.inspectorTab);
+    const nextIdx = (currentIdx - 1 + tabs.length) % tabs.length;
     return {
       ...state,
-      inspectorTab: "details"
+      inspectorTab: tabs[nextIdx] ?? "details"
     };
   }
   if (key.name === "l" || key.sequence === "l" || key.name === "right") {
+    const tabs: Array<"details" | "connections" | "logs"> = ["details", "connections", "logs"];
+    const currentIdx = tabs.indexOf(state.inspectorTab);
+    const nextIdx = (currentIdx + 1) % tabs.length;
     return {
       ...state,
-      inspectorTab: "logs"
+      inspectorTab: tabs[nextIdx] ?? "details"
     };
   }
   if (key.name === "p" || key.sequence === "p") {

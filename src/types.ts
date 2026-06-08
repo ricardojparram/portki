@@ -1,5 +1,15 @@
 export type Protocol = "tcp" | "tcp6" | "udp" | "udp6";
 
+export interface ActiveConnection {
+  protocol: "tcp" | "tcp6";
+  localAddress: string;
+  localPort: number;
+  remoteAddress: string;
+  remotePort: number;
+  state: string;
+}
+
+
 export type AppKind =
   | "nextjs"
   | "nestjs"

@@ -400,5 +400,71 @@ describe("PortUi", () => {
     expect(frame).toContain("portki (reservado)");
     act(() => setup.renderer.destroy());
   });
+
+  test("navigates inspector tabs circularly using tab and arrow keys", async () => {
+    const setup = await testRender(<PortUi initialEntries={entries} />, { width: 100, height: 28 });
+
+    await setup.waitForFrame((frame: string) => frame.includes("3000"));
+    let frame = setup.captureCharFrame();
+    expect(frame).toContain("Inspector [Detalles]");
+
+    // Press 'l' to go to Connections
+    act(() => setup.mockInput.pressKey("l"));
+    await setup.flush();
+    frame = setup.captureCharFrame();
+    expect(frame).toContain("Inspector [Conexiones]");
+
+    // Press 'l' to go to Logs
+    act(() => setup.mockInput.pressKey("l"));
+    await setup.flush();
+    frame = setup.captureCharFrame();
+    expect(frame).toContain("Inspector [Logs]");
+
+    // Press 'l' again to wrap around to Detalles
+    act(() => setup.mockInput.pressKey("l"));
+    await setup.flush();
+    frame = setup.captureCharFrame();
+    expect(frame).toContain("Inspector [Detalles]");
+
+    // Press 'h' to go backward to Logs
+    act(() => setup.mockInput.pressKey("h"));
+    await setup.flush();
+    frame = setup.captureCharFrame();
+    expect(frame).toContain("Inspector [Logs]");
+
+    // Press 'h' again to go backward to Conexiones
+    act(() => setup.mockInput.pressKey("h"));
+    await setup.flush();
+    frame = setup.captureCharFrame();
+    expect(frame).toContain("Inspector [Conexiones]");
+
+    act(() => setup.renderer.destroy());
+  });
+
+  test("switches ports while connections tab is active without crashing", async () => {
+    const setup = await testRender(<PortUi initialEntries={entries} />, { width: 100, height: 28 });
+
+    await setup.waitForFrame((frame: string) => frame.includes("3000"));
+    
+    // Press 'l' to go to Connections
+    act(() => setup.mockInput.pressKey("l"));
+    await setup.flush();
+    let frame = setup.captureCharFrame();
+    expect(frame).toContain("Inspector [Conexiones]");
+
+    // Move down to select the next port (5432)
+    act(() => setup.mockInput.pressKey("j"));
+    await setup.flush();
+    frame = setup.captureCharFrame();
+    expect(frame).toContain("5432");
+
+    // Move up to select the previous port (3000)
+    act(() => setup.mockInput.pressKey("k"));
+    await setup.flush();
+    frame = setup.captureCharFrame();
+    expect(frame).toContain("3000");
+
+    act(() => setup.renderer.destroy());
+  });
 });
 
