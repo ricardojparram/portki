@@ -222,7 +222,7 @@ export function PortUi({ renderer: providedRenderer, scanner = scanPorts, initia
           {filtered.length === 0 ? <text fg={theme.dim}>No listeners match this search</text> : null}
         </box>
 
-        <box width="38%" flexDirection="column" gap={0}>
+        <box width="42%" flexDirection="column" gap={0}>
           <box
             title={
               state.inspectorTab === "details"
@@ -536,7 +536,7 @@ function AppSummary({
   const medium = entries.filter((e) => e.risk === "medium").length;
   const high = entries.filter((e) => e.risk === "high").length;
 
-  const barWidth = 15;
+  const barWidth = 10;
   let lowWidth = total > 0 ? Math.round((low / total) * barWidth) : 0;
   let mediumWidth = total > 0 ? Math.round((medium / total) * barWidth) : 0;
   let highWidth = total > 0 ? Math.max(0, barWidth - lowWidth - mediumWidth) : 0;
@@ -1017,7 +1017,7 @@ function riskColor(risk: RiskLevel): RGBA {
 }
 
 function barParts(count: number, total: number): { filled: string; empty: string } {
-  const width = 12;
+  const width = 8;
   const filled = total > 0 ? Math.max(1, Math.round((count / total) * width)) : 0;
   return {
     filled: "█".repeat(filled),

@@ -6,14 +6,20 @@ Output assets/preview.gif
 Require bun
 
 Set Shell "bash"
-Set FontSize 16
-Set Width 1200
-Set Height 600
+Set FontSize 18
+Set Width 1366
+Set Height 768
 Set Theme "Catppuccin Mocha"
 Set Padding 20
 
+# Setup PATH to run local typescript version as portki command
+Type "export PATH=$PWD/bin_tmp:$PATH"
+Enter
+Type "clear"
+Enter
+
 # Start Portki TUI
-Type "bun src/index.tsx"
+Type "portki"
 Enter
 Sleep 3s
 
