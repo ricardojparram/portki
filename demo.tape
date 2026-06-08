@@ -12,12 +12,6 @@ Set Height 768
 Set Theme "Catppuccin Mocha"
 Set Padding 20
 
-# Setup PATH to run local typescript version as portki command
-Type "export PATH=$PWD/bin_tmp:$PATH"
-Enter
-Type "clear"
-Enter
-
 # Start Portki TUI
 Type "portki"
 Enter
