@@ -536,24 +536,15 @@ function AppSummary({
   const medium = entries.filter((e) => e.risk === "medium").length;
   const high = entries.filter((e) => e.risk === "high").length;
 
-  const barWidth = 10;
-  let lowWidth = total > 0 ? Math.round((low / total) * barWidth) : 0;
-  let mediumWidth = total > 0 ? Math.round((medium / total) * barWidth) : 0;
-  let highWidth = total > 0 ? Math.max(0, barWidth - lowWidth - mediumWidth) : 0;
-  if (total > 0 && lowWidth + mediumWidth + highWidth !== barWidth) {
-    highWidth = Math.max(0, barWidth - lowWidth - mediumWidth);
-  }
-
   return (
     <Fragment key="summary-view">
       <text key="summary-total" height={1}>
         <span fg={theme.blue}>Listeners:</span> {total}
       </text>
       <text key="summary-risk" height={1}>
-        <span fg={theme.blue}>Risk:</span> [<span fg={theme.green}>{"█".repeat(lowWidth)}</span><span fg={theme.yellow}>{"█".repeat(mediumWidth)}</span><span fg={theme.red}>{"█".repeat(highWidth)}</span>] <span fg={theme.green}>L:{low}</span> <span fg={theme.yellow}>M:{medium}</span> <span fg={theme.red}>H:{high}</span>
+        <span fg={theme.blue}>Risk:</span> <span fg={theme.green}>L:{low}</span>  <span fg={theme.yellow}>M:{medium}</span>  <span fg={theme.red}>H:{high}</span>
       </text>
-      <text key="summary-spacer" height={1} content="" />
-      {appCounts.slice(0, 4).map(([app, count]) => {
+      {appCounts.slice(0, 3).map(([app, count]) => {
         const { filled, empty } = barParts(count, total);
         return (
           <text key={`summary-app-${app}`} height={1}>
