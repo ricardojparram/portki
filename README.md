@@ -1,4 +1,4 @@
-<pre>
+<pre align="center">
 ██████╗  ██████╗ ██████╗ ████████╗██╗  ██╗██╗
 ██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝██║ ██╔╝██║
 ██████╔╝██║   ██║██████╔╝   ██║   █████╔╝ ██║
@@ -7,184 +7,155 @@
 ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝
 </pre>
 
-`portki` is a Linux TUI for inspecting local port listeners and stopping them with a conservative kill policy.
+<p align="center">
+  <strong>A Linux TUI for inspecting local port listeners and safely stopping them with a conservative kill policy.</strong>
+</p>
 
-It is built for developer machines where ports are constantly occupied by Next.js, NestJS, Vite, Docker, Podman, MCP servers, web servers, databases, and background tools. The scanner reads Linux `/proc` directly, so normal usage does not depend on `lsof`, `ss`, or `fuser`.
+<p align="center">
+  <img src="https://img.shields.io/npm/v/portki-tui?color=brightgreen&style=flat-square" alt="NPM Version">
+  <img src="https://img.shields.io/github/license/ricardojparram/portki?color=blue&style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/platform-linux-lightgrey?style=flat-square" alt="Platform Linux">
+  <img src="https://img.shields.io/badge/dependencies-zero%20(standalone)-orange?style=flat-square" alt="Zero Dependencies">
+</p>
+
+---
+
+`portki` is built for developer machines where ports are constantly occupied by Next.js, NestJS, Vite, Docker, Podman, databases, and background services. The scanner reads the Linux `/proc` filesystem directly, meaning normal usage has **zero dependencies** on `lsof`, `ss`, or `fuser`.
 
 ## Preview
 
 ![PORTKI TUI preview](assets/preview.png)
 
+---
+
 ## Features
 
-- Dense lazygit-style TUI with listener list, inspector, summary chart, search, command mode, and centered confirmations.
-- Fast Linux scanner based on `/proc/net/*` plus `/proc/<pid>/fd` inode mapping.
-- App detection for Next.js, NestJS, Vite, Node, Bun, Deno, Docker, Podman, MCP servers, Apache, Nginx, Caddy, Lighttpd, Traefik, HAProxy, Envoy, Postgres, Redis, MySQL, MongoDB, Elasticsearch, RabbitMQ, Memcached, SSH, DNS, DHCP, Chrony/NTP, CUPS, mDNS, LLMNR, Passim, GSConnect, WSDD, Engram, Open Design sidecars, Python, PHP, Java, Ruby, system sockets, and generic programs.
-- Low-confidence hints for unresolved sockets on well-known ports such as 22, 53, 68, 80, 323, 443, 631, 5353, 5355, 5432, 6379, 3306, 27017, 9200, 5672, 11211, and 27500.
-- Optional Docker/Podman metadata enrichment: when available, published ports are matched back to container name and image.
-- Safe kill flow: `SIGTERM` first, short wait, second confirmation before `SIGKILL`.
-- Group selection with `<space>` and grouped kill confirmation.
-- Parseable CLI output for scripting with `portki list --json`.
+### 🔍 Core Inspector
+- **Dense lazygit-style UI**: Interactive listener list, summary charts, and modal confirmations.
+- **Traffic Inspector**: View active socket connections (`ESTABLISHED`, `TIME_WAIT`, etc.) for the selected port.
+- **Live Process Logs**: View the stdout/stderr stream from processes, including native Docker and Podman container logs.
+- **Direct `/proc` Parsing**: Extreme speed and low resource usage without executing external utilities.
 
-## Install
+### 🛡️ Conservative Kill Flow
+- **Wholesome Safety Model**: Never sends `SIGKILL` first. Sends `SIGTERM`, waits, and requires a second confirmation before sending `SIGKILL` to remaining processes.
+- **Group Killing**: Select multiple listeners with `<space>` and terminate them collectively.
+- **Protected Processes**: Automatically blocks attempts to kill PID 1, protected system processes, or the running `portki` instance.
+- **Risk Assessment**: Highlights infrastructure listeners (databases, reverse proxies, web servers, SSH) as high-risk targets.
 
-Install the standalone precompiled binary:
+### 🔌 Extensible Integrations
+- **App Detection**: Built-in detection signatures for Next.js, NestJS, Vite, Node, Bun, Docker, Podman, Postgres, Redis, Nginx, Caddy, Apache, system services, and more.
+- **Docker/Podman Enrichment**: Matches published ports back to their parent container name, ID, and image.
+- **CLI & Scripting**: Output structured JSON for scripts with `portki list --json`.
 
+---
+
+## Installation
+
+You can install `portki` using either the standalone binary or npm:
+
+| Feature | Standalone Binary (Recommended) | NPM Package (`portki-tui`) |
+| :--- | :--- | :--- |
+| **Dependencies** | None (Zero-dependency binary) | Node.js `>=20` and Bun |
+| **Updates** | Via install script | `npm update -g portki-tui` |
+| **Target OS** | Linux (x64 / arm64) | Linux |
+
+### Option 1: Standalone Binary (Zero dependencies)
+Run the automated installer:
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ricardojparram/portki/main/install.sh | sh
 ```
+The installer automatically detects your processor architecture (x86_64 vs arm64), downloads the compiled standalone binary from the latest GitHub Release, and registers it under your path.
 
-The install script detects your processor architecture (x86_64 vs arm64), downloads the precompiled standalone binary from the latest GitHub Release, and places it in your path.
-
-Alternatively, you can install the NPM package:
-
+### Option 2: NPM Package
 ```sh
 npm install -g portki-tui
 ```
+> [!IMPORTANT]
+> If installing via npm, you must have Bun installed on your system to run the interactive TUI.
 
-For manual npm installs, you must install Bun on your system first if you want to use the interactive TUI.
-
-Requirements:
-
-- Linux with `/proc` mounted.
-- A terminal with truecolor support recommended.
-- **Standalone installation**: Zero runtime dependencies (no Node.js or Bun required).
-- **NPM installation**: Node.js `>=20.0.0`, npm, and Bun.
+---
 
 ## Usage
 
-Open the TUI:
-
+### Interactive TUI Mode
+Launch the main TUI:
 ```sh
 portki
 ```
 
-The TUI path currently runs through Bun. Scriptable commands such as `portki list --json` and `portki kill ... --safe` run through Node.
-
-List listeners as JSON:
-
+### Scriptable Commands
+Output active listeners in JSON format:
 ```sh
 portki list --json
 ```
 
-Check the scanner environment and optional diagnostic tools:
-
+Verify your environment permissions and check for optional diagnostic tools:
 ```sh
 portki doctor
 ```
 
-Kill by port or PID using the same safe policy as the TUI:
-
+Kill specific ports or PIDs using the same safe policy as the TUI:
 ```sh
 portki kill 3000 --safe
-portki kill 675399 --safe
 portki kill 3000 --safe --force
 ```
 
-## Controls
+---
 
-```text
-Move: j/k | Select: <space> | Find: / | Command: : | Kill: d | Refresh: r | Quit: q
-```
+## Controls & Keyboard Shortcuts
 
-Command mode supports:
+### Navigation & Actions
+| Shortcut | Action |
+| :--- | :--- |
+| `j` / `k` | Navigate up / down in the listener list |
+| `g` / `G` | Jump to the top / bottom of the list |
+| `<space>` | Select / Deselect multiple items |
+| `d` | Initiate safe kill flow on selected items |
+| `r` | Manually reload / refresh listeners |
+| `/` | Enter Live Filter mode |
+| `:` | Open Command Line mode |
+| `Tab` / `h` / `l` | Alternate tabs in the Inspector pane (`Details` ⇄ `Connections` ⇄ `Logs`) |
+| `?` | Toggle Help Modal |
+| `q` / `Esc` | Quit / Close active Modal |
 
-```text
-:kill 3000
-:kill-pid 1234
-:filter next
-:refresh
-:quit
-```
+### Command Mode (`:`)
+Press `:` to open the command line in the TUI:
+- `:kill <port>` - Kill a listener on a port.
+- `:kill-pid <pid>` - Kill a specific process ID.
+- `:p <port>` or `:private <port>` - Reserve/monopolize a local port.
+- `:release <port>` - Free a reserved port.
+- `:refresh` - Reload listeners list.
+- `:quit` - Exit `portki`.
 
-Kill confirmations accept `y` or `Enter`. `Esc` cancels modals and line input.
-
-## Safety Model
-
-- Uses Linux `/proc` as the primary source for sockets and process metadata.
-- Treats `ss`, `lsof`, `fuser`, Docker, and Podman as optional diagnostics/enrichment, not runtime requirements.
-- Blocks unresolved PIDs, PID 1, and the running `portki` process.
-- Marks infrastructure listeners such as web servers, databases, SSH, DNS, DHCP, mDNS, LLMNR, CUPS, Passim, Docker, and Podman as high risk.
-- Never sends `SIGKILL` first.
-- Requires a second confirmation before force killing remaining processes.
-- Shows partial data when `/proc` permissions prevent reading process details.
-- Never asks for sudo.
+---
 
 ## Development
 
-Runtime is hybrid for now: Node handles scriptable commands, while the interactive TUI uses Bun for OpenTUI FFI. Development also uses Bun for tests and bundling.
+`portki` uses Node.js for lightweight CLI/JSON scripts and Bun for the high-performance OpenTUI FFI runtime.
 
 ```sh
+# Clone the repository
 git clone https://github.com/ricardojparram/portki.git
 cd portki
+
+# Install dependencies
 bun install
+
+# Run test suite
 bun test
-bun run check
+
+# Run build & compilation
 bun run build
 ```
 
-Run locally:
-
+Run your local build:
 ```sh
 bun run build
 ./bin/portki
 ```
 
-Install locally as a global command:
-
-```sh
-npm install -g .
-portki
-```
-
-Release check:
-
-```sh
-bun run release:check
-```
-
-That command runs typecheck, tests, build, and `npm pack --dry-run`.
-
-## Contributing
-
-Contributions are welcome.
-
-Good first areas:
-
-- Precompiled standalone binaries for GitHub releases, so the TUI can run without requiring users to install Bun.
-- App detection patterns for more frameworks, tools, and container helpers.
-- Linux distro edge cases in `/proc` parsing.
-- TUI layout improvements for small terminals.
-- Tests for scanner fixtures, kill policy, and keyboard flows.
-- Documentation and screenshots.
-
-Before opening a PR:
-
-```sh
-bun install
-bun run release:check
-```
-
-Please keep the kill policy conservative. Changes that send signals, infer risk, or expand process detection should include focused tests.
-
-## Publishing
-
-Publishing is manual for now:
-
-```sh
-bun run release:check
-npm publish
-```
-
-The npm tarball is intentionally small and includes only:
-
-- `assets/`
-- `bin/`
-- `dist/`
-- `README.md`
-- `LICENSE`
-- `package.json`
+---
 
 ## License
 
-MIT
+MIT License. See [LICENSE](LICENSE) for details.
