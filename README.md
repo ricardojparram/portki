@@ -147,11 +147,6 @@ bun run build
 ./bin/portki
 ```
 
-Generate TUI preview animation (requires [VHS](https://github.com/charmbracelet/vhs)):
-```sh
-vhs demo.tape
-```
-
 ---
 
 ## License
