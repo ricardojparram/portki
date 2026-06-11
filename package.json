@@ -1,6 +1,6 @@
 {
   "name": "portki-tui",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "A Linux TUI for inspecting and safely stopping local port listeners.",
   "type": "module",
   "license": "MIT",
