@@ -1,3 +1,5 @@
+import { unlinkSync, accessSync, constants } from "fs";
+import { basename } from "path";
 import { scanPorts } from "./procfs";
 import { executeKillPlan, planKill } from "./kill-policy";
 import { formatDoctorReport, inspectDoctor } from "./doctor";
@@ -15,6 +17,7 @@ export async function runCli(argv: string[]): Promise<number> {
   if (command === "list") return listCommand(args);
   if (command === "kill") return killCommand(args);
   if (command === "doctor") return doctorCommand();
+  if (command === "uninstall") return uninstallCommand();
   if (command === "--help" || command === "-h" || command === "help") {
     printHelp();
     return 0;
@@ -90,6 +93,36 @@ function formatEntry(entry: PortEntry): string {
   return `${entry.protocol.padEnd(4, " ")} ${entry.address}:${entry.port} ${pid} ${app} ${risk} ${entry.cmdline ?? entry.exe ?? ""}${container}`;
 }
 
+async function uninstallCommand(): Promise<number> {
+  const binaryPath = process.execPath;
+  const binaryName = basename(binaryPath);
+
+  if (binaryName !== "portki") {
+    console.log("portki is running via Node/Bun (likely installed via npm or in development).");
+    console.log("To uninstall the global npm package, please run:");
+    console.log("  npm uninstall -g portki-tui");
+    return 0;
+  }
+
+  try {
+    accessSync(binaryPath, constants.W_OK);
+  } catch (err) {
+    console.error(`Error: Permission denied to remove portki at ${binaryPath}`);
+    console.error("Please run the command with sudo:");
+    console.error("  sudo portki uninstall");
+    return 1;
+  }
+
+  try {
+    unlinkSync(binaryPath);
+    console.log(`Successfully uninstalled portki from ${binaryPath}`);
+    return 0;
+  } catch (err: any) {
+    console.error(`Failed to uninstall portki: ${err.message}`);
+    return 1;
+  }
+}
+
 function printHelp() {
   console.log(`portki
 
@@ -98,5 +131,6 @@ Usage:
   portki list [--json]
   portki doctor
   portki kill <port|pid> --safe [--force]
+  portki uninstall
 `);
 }
